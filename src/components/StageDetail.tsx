@@ -9,6 +9,7 @@ import type {
 } from '../domain/rally'
 import { summarizeRouteWeather, type StageWeatherSummary } from '../map/weatherSummary'
 import { stageShareUrl } from '../navigation/stageRoute'
+import { presentStageDistance } from '../presentation/stageDistance'
 import { describeStageConditions } from '../presentation/stageExperience'
 import { buildPlannedStartGrid } from '../simulation/startGrid'
 import { RallyMap, type EnvironmentStatus } from './RallyMap'
@@ -119,6 +120,8 @@ export function StageDetail({
 
   const conditions = describeStageConditions(weatherSummary)
   const geometryStatus = technicalStage?.geometryStatus ?? 'pending-verification'
+  const distance = presentStageDistance(stage.distanceKm, technicalStage?.distanceKm)
+  const stageLabel = stage.name.replace(/\s+1$/, '')
   const sources = useMemo(() => {
     const all = [
       ...stage.provenance.sources,
@@ -162,7 +165,7 @@ export function StageDetail({
       <header className="stage-hero">
         <div>
           <p className="eyebrow">{stage.code} · STAGE BRIEF</p>
-          <h1 className="editorial-title">{stage.name.replace(/\s+1$/, '')}</h1>
+          <h1 className="editorial-title">{stageLabel}</h1>
           <p className="stage-deck">Un mismo tramo, visto como recorrido + tiempo + acceso + contexto. Sin convertir estimaciones en hechos.</p>
         </div>
         <div className="stage-hero-actions">
@@ -176,7 +179,11 @@ export function StageDetail({
       </header>
 
       <section className="stage-facts" aria-label="Resumen del tramo">
-        <div><span>DISTANCIA</span><strong>{stage.distanceKm.toFixed(2)} km</strong></div>
+        <div>
+          <span>DISTANCIA</span>
+          <strong>{distance.primary}</strong>
+          {distance.technical ? <small>{distance.technical}</small> : null}
+        </div>
         <div><span>PRIMER AUTO</span><strong>{formatClock(stage.scheduledStart, event.timezone)}</strong></div>
         <div><span>GEOMETRÍA</span><strong>{geometryStatus}</strong></div>
         <div><span>CLIMA</span><strong>{weatherStatus === 'ready' ? 'MODELO DISPONIBLE' : weatherStatus === 'loading' ? 'ACTUALIZANDO' : 'PENDIENTE'}</strong></div>
@@ -223,7 +230,7 @@ export function StageDetail({
           <p className="eyebrow">PARA IR AL TRAMO</p>
           <h2 className="editorial-subtitle">Acceso y seguridad.</h2>
           <dl className="spectator-facts">
-            <div><dt>ACCESO ESPECÍFICO SS1</dt><dd className={spectator.accessStatus === 'pending' ? 'pending-value' : ''}>{spectator.accessStatus === 'pending' ? 'PENDING OFFICIAL POINTS' : 'PUBLICADO'}</dd></div>
+            <div><dt>ACCESO ESPECÍFICO</dt><dd className={spectator.accessStatus === 'pending' ? 'pending-value' : ''}>{spectator.accessStatus === 'pending' ? 'PENDING OFFICIAL POINTS' : 'PUBLICADO'}</dd></div>
             <div><dt>CIERRE GENERAL</dt><dd>{spectator.roadClosureAt ? formatDateTime(spectator.roadClosureAt, event.timezone) : spectator.roadClosureText ?? 'PENDING'}</dd></div>
             <div><dt>PARKING</dt><dd className="pending-value">{spectator.parking.length > 0 ? `${spectator.parking.length} punto(s)` : 'PENDING OFFICIAL GUIDE'}</dd></div>
             <div><dt>ZONAS DE PÚBLICO</dt><dd className="pending-value">{spectator.spectatorZones.length > 0 ? `${spectator.spectatorZones.length} publicada(s)` : 'PENDING'}</dd></div>
@@ -235,7 +242,7 @@ export function StageDetail({
       </section>
 
       {safetyTimeline.length > 0 ? (
-        <section className="safety-train-panel" aria-label="Tren de seguridad antes de SS1">
+        <section className="safety-train-panel" aria-label={`Tren de seguridad antes de ${stage.code}`}>
           <div className="section-heading">
             <div>
               <p className="eyebrow">TREN DE SEGURIDAD · HORARIO DERIVADO</p>
@@ -255,8 +262,8 @@ export function StageDetail({
             <article className="safety-step safety-step--start">
               <span className="safety-step-offset">T±0</span>
               <strong>{formatClock(stage.scheduledStart, event.timezone)}</strong>
-              <h3>SS1 · primer auto</h3>
-              <p>Inicio previsto de la competencia en Turquía.</p>
+              <h3>{stage.code} · primer auto</h3>
+              <p>Inicio previsto de la competencia en {stageLabel}.</p>
             </article>
           </div>
           <p className="panel-note">Los horarios operativos pueden cambiar por instrucciones del organizador, capacidad, seguridad o dirección de carrera. La publicación oficial prevalece sobre esta derivación.</p>
@@ -267,10 +274,10 @@ export function StageDetail({
         <div>
           <p className="eyebrow">CAPA OPCIONAL</p>
           <h2 className="editorial-subtitle">Simular el paso de los autos.</h2>
-          <p>Los autos siguen siendo slots genéricos y simulados. No son timing en vivo ni asignación real de pilotos.</p>
+          <p>{run ? 'Los autos siguen siendo slots genéricos y simulados. No son timing en vivo ni asignación real de pilotos.' : 'Este tramo ya tiene ficha territorial y clima; el modelo de movimiento todavía no está calibrado para esta etapa.'}</p>
         </div>
         <button className={`simulation-button${simulationOpen ? ' simulation-button--active' : ''}`} type="button" onClick={() => setSimulationOpen((current) => !current)} disabled={!run}>
-          {simulationOpen ? '■ CERRAR SIMULACIÓN' : '▶ SIMULAR TRAMO'}
+          {!run ? 'SIMULACIÓN PENDIENTE' : simulationOpen ? '■ CERRAR SIMULACIÓN' : '▶ SIMULAR TRAMO'}
         </button>
       </section>
 
@@ -314,6 +321,7 @@ export function StageDetail({
             ))}
           </ul>
           {stage.provenance.note ? <p className="source-note">{stage.provenance.note}</p> : null}
+          {technicalStage?.provenance.note ? <p className="source-note">{technicalStage.provenance.note}</p> : null}
           {spectator.provenance.note ? <p className="source-note">{spectator.provenance.note}</p> : null}
         </div>
       </section>
