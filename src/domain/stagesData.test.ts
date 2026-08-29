@@ -38,3 +38,16 @@ test('Nuevo Rere and Hualqui keep official WRC technical distances separate from
   assert.match(nuevoRere?.provenance.note ?? '', /new start/i)
   assert.match(hualqui?.provenance.note ?? '', /reversed/i)
 })
+
+test('Nuevo Rere and Hualqui use dense current-route reference geometry rather than nine-point corridor sketches', async () => {
+  const stages = await loadStages()
+  const friday = stages.filter((stage) => stage.code === 'SS2' || stage.code === 'SS3')
+
+  assert.equal(friday.length, 2)
+  for (const stage of friday) {
+    assert.ok((stage.geometry?.coordinates.length ?? 0) >= 50, `${stage.code} should contain a dense route geometry`)
+    assert.ok(stage.provenance.sources.some((source) => source.url.includes('rally-maps.com')), `${stage.code} should cite the current interactive route reference`)
+    assert.match(stage.provenance.note ?? '', /reference reconstruction/i)
+    assert.doesNotMatch(stage.provenance.note ?? '', /coarse corridor reconstruction/i)
+  }
+})
