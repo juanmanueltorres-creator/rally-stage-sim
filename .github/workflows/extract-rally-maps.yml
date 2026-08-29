@@ -17,7 +17,7 @@ jobs:
           node-version: 22
       - name: Install browser adapter
         run: npm install --no-save puppeteer-core@24
-      - name: Inspect stage storage shape
+      - name: Test consent-gated map initialization
         env:
           RALLY_URL: https://www.rally-maps.com/Rally-Chile-BIOB%C3%8DO-2026
         run: |
@@ -34,33 +34,33 @@ jobs:
             })
             try {
               const page = await browser.newPage()
-              await page.goto(process.env.RALLY_URL, { waitUntil: 'networkidle2', timeout: 60000 })
-              await new Promise((resolve) => setTimeout(resolve, 3000))
-              const shape = await page.evaluate(() => {
-                const storage = window.sl?.leaflet?.data?.storage
-                const stages = storage?.stages
-                let getterResult = null
-                try { getterResult = storage?.getStages?.() ?? null } catch (error) { getterResult = { error: String(error) } }
-                const summarize = (value) => ({
-                  type: typeof value,
-                  isArray: Array.isArray(value),
-                  constructor: value?.constructor?.name ?? null,
-                  length: typeof value?.length === 'number' ? value.length : null,
-                  keys: value && (typeof value === 'object' || typeof value === 'function') ? Object.keys(value).slice(0, 30) : [],
-                  sample: value && (typeof value === 'object' || typeof value === 'function')
-                    ? Object.values(value).slice(0, 3).map((entry) => ({
-                        name: entry?.name ?? null,
-                        fullName: entry?.fullName ?? null,
-                        keys: entry && typeof entry === 'object' ? Object.keys(entry).slice(0, 20) : [],
-                      }))
-                    : [],
-                })
-                return {
-                  stages: summarize(stages),
-                  getterResult: summarize(getterResult),
-                }
+              await page.setViewport({ width: 1080, height: 1024 })
+              await page.goto(process.env.RALLY_URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
+
+              try {
+                await page.waitForSelector('.fc-cta-consent', { timeout: 5000 })
+                await page.click('.fc-cta-consent')
+              } catch {}
+
+              await page.waitForSelector('.cm__body', { timeout: 15000 })
+              const accepted = await page.evaluate(() => {
+                const buttons = [...document.querySelectorAll('.cm__btn')]
+                const button = buttons.find((node) => /accept all/i.test(node.textContent ?? ''))
+                if (!button) return false
+                button.click()
+                return true
               })
-              console.log(JSON.stringify(shape, null, 2))
+              if (!accepted) throw new Error('Accept All consent button not found')
+
+              await page.waitForSelector('.leaflet-control-container', { timeout: 30000 })
+              await page.waitForNetworkIdle({ idleTime: 1000, timeout: 30000 })
+              await page.waitForFunction(() => (window?.sl?.leaflet?.data?.storage?.stages?.length ?? 0) > 0, { timeout: 30000 })
+
+              const summary = await page.evaluate(() => ({
+                stageCount: window.sl.leaflet.data.storage.stages.length,
+                stages: window.sl.leaflet.data.storage.stages.map((stage) => ({ name: stage.name, fullName: stage.fullName })),
+              }))
+              console.log(JSON.stringify(summary, null, 2))
             } finally {
               await browser.close()
             }
