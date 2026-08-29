@@ -1,7 +1,9 @@
 [
   {
     "stageId": "chile-2026-ss1-turquia-1",
-    "carNo": 0,
+    "priority": "P1",
+    "carCount": 10,
+    "startIntervalSeconds": 180,
     "expectedDurationSeconds": 826.4,
     "playbackSpeed": 60,
     "provenance": {
@@ -11,9 +13,19 @@
           "label": "ANARE Rally Nacimiento–Negrete 2026 — PE1 unofficial timing benchmark",
           "url": "https://anarerally.cl/Resultados/tiemposPrime.php",
           "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "FIA 2026 WRC Sporting Regulations — section 41.3 start intervals",
+          "url": "https://www.fia.com/system/files/documents/2026_wrc_sr_2026_published_25_november_2025.pdf",
+          "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "Rally Chile BioBío 2026 — official entry list",
+          "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+          "accessedAt": "2026-08-29"
         }
       ],
-      "note": "Motion benchmark only: 13:46.4 from the local Rally2 PE1 winner on Turquía. It is not a WRC Rally1 prediction. Playback is accelerated 60× for visualization."
+      "note": "Ten generic SIM slots represent the ten RC1/Rally1 P1 entries published for Rally Chile 2026. The official entry-list order is not treated as a running order. The 180-second interval is a planning assumption based on the FIA P1 minimum; an official start list, event-specific instructions or Live TV intervals override it. The 13:46.4 local Rally2 result remains a motion benchmark only, not a WRC Rally1 pace forecast."
     }
   }
 ]
