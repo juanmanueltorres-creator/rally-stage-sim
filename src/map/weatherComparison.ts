@@ -6,6 +6,13 @@ export interface StrongestTemperatureShift {
   deltaC: number
 }
 
+export interface TemperatureDeltaProfilePoint {
+  nodeId: string
+  role: RouteEnvironmentSnapshot['node']['role']
+  distanceKm: number
+  deltaC: number | null
+}
+
 export interface RouteWeatherComparison {
   meanTemperatureDeltaC: number | null
   maxGustDeltaKmh: number | null
@@ -30,6 +37,27 @@ function max(values: Array<number | null>): number | null {
 
 function delta(after: number | null, before: number | null): number | null {
   return after === null || before === null ? null : after - before
+}
+
+export function buildTemperatureDeltaProfile(
+  firstPass: RouteEnvironmentSnapshot[],
+  secondPass: RouteEnvironmentSnapshot[],
+): TemperatureDeltaProfilePoint[] {
+  const secondByNode = new Map(secondPass.map((snapshot) => [snapshot.node.id, snapshot]))
+
+  return firstPass.map((before) => {
+    const after = secondByNode.get(before.node.id)
+    const deltaC = !after || before.temperatureC === null || after.temperatureC === null
+      ? null
+      : after.temperatureC - before.temperatureC
+
+    return {
+      nodeId: before.node.id,
+      role: before.node.role,
+      distanceKm: before.node.distanceKm,
+      deltaC,
+    }
+  })
 }
 
 export function compareRouteWeather(
