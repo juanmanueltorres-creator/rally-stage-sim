@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { RouteNode } from './environmentNodes.ts'
-import { normalizeOpenMeteoForecast } from './openMeteo.ts'
+import { buildOpenMeteoForecastUrl, normalizeOpenMeteoForecast } from './openMeteo.ts'
 
 const nodes: RouteNode[] = [
   { id: 'start', role: 'start', distanceKm: 0, coordinate: [-72.72, -37.25] },
@@ -47,4 +47,20 @@ test('normalizeOpenMeteoForecast selects the nearest hourly forecast for each ro
   assert.equal(snapshots[1].node.id, 'km-2.5')
   assert.equal(snapshots[1].elevationM, 212)
   assert.equal(snapshots[1].temperatureC, 9.9)
+})
+
+test('buildOpenMeteoForecastUrl requests all nodes for the stage date in local time', () => {
+  const requestUrl = new URL(buildOpenMeteoForecastUrl(nodes, '2026-09-11T08:53:00-03:00', 'America/Santiago'))
+
+  assert.equal(requestUrl.origin, 'https://api.open-meteo.com')
+  assert.equal(requestUrl.pathname, '/v1/forecast')
+  assert.equal(requestUrl.searchParams.get('latitude'), '-37.25,-37.235')
+  assert.equal(requestUrl.searchParams.get('longitude'), '-72.72,-72.71')
+  assert.equal(requestUrl.searchParams.get('timezone'), 'America/Santiago')
+  assert.equal(requestUrl.searchParams.get('start_date'), '2026-09-11')
+  assert.equal(requestUrl.searchParams.get('end_date'), '2026-09-11')
+  assert.equal(
+    requestUrl.searchParams.get('hourly'),
+    'temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation',
+  )
 })
