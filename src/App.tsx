@@ -128,7 +128,13 @@ export function App() {
         </article>
       </section>
 
-      <RallyMap geometryStatus={stage.geometryStatus} geometry={stage.geometry} run={run} />
+      <RallyMap
+        geometryStatus={stage.geometryStatus}
+        geometry={stage.geometry}
+        run={run}
+        scheduledStart={stage.scheduledStart}
+        timezone={event.timezone}
+      />
 
       <section className="sources" aria-label="Data sources">
         <div>
