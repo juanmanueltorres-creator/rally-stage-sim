@@ -1,0 +1,87 @@
+name: Extract Rally Maps
+
+on:
+  push:
+    branches:
+      - feat/chile-2026-foundation
+    paths:
+      - .github/workflows/extract-rally-maps.yml
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser adapter
+        run: npm install --no-save puppeteer-core@24
+      - name: Extract current Friday stage geometries
+        env:
+          RALLY_URL: https://www.rally-maps.com/Rally-Chile-BIOB%C3%8DO-2026
+        run: |
+          export PUPPETEER_EXECUTABLE_PATH="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
+          test -n "$PUPPETEER_EXECUTABLE_PATH"
+          node <<'NODE'
+          const fs = require('node:fs')
+          const puppeteer = require('puppeteer-core')
+
+          async function safeClick(page, selector) {
+            try {
+              await page.waitForSelector(selector, { timeout: 5000 })
+              await page.click(selector)
+            } catch {}
+          }
+
+          ;(async () => {
+            const browser = await puppeteer.launch({
+              headless: true,
+              executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+              args: ['--no-sandbox', '--disable-dev-shm-usage'],
+            })
+            try {
+              const page = await browser.newPage()
+              await page.setViewport({ width: 1280, height: 1000 })
+              await page.goto(process.env.RALLY_URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
+              await safeClick(page, '.fc-cta-consent')
+              try {
+                const buttons = await page.$$('.cm__btn')
+                for (const button of buttons) {
+                  const text = await button.evaluate((node) => node.textContent || '')
+                  if (/accept all/i.test(text)) {
+                    await button.click()
+                    break
+                  }
+                }
+              } catch {}
+              await page.waitForFunction(
+                () => window?.sl?.leaflet?.data?.storage?.stages?.length > 0,
+                { timeout: 60000 },
+              )
+              const stages = await page.evaluate(() => window.sl.leaflet.data.storage.stages.map((stage) => ({
+                name: stage.name,
+                fullName: stage.fullName,
+                geometries: stage.geometries.map((entry) => ({
+                  type: entry.type,
+                  coordinates: entry.geometry?.coordinates ?? null,
+                })),
+              })))
+              const wanted = stages.filter((stage) => /Nuevo Rere|Hualqui/i.test(`${stage.name} ${stage.fullName}`))
+              if (wanted.length < 2) throw new Error(`Expected Nuevo Rere and Hualqui, got ${wanted.map((s) => s.name).join(', ')}`)
+              fs.mkdirSync('tmp', { recursive: true })
+              fs.writeFileSync('tmp/rally-maps-friday.json', JSON.stringify(wanted, null, 2))
+              console.log(wanted.map((stage) => ({ name: stage.name, geometries: stage.geometries.map((g) => [g.type, Array.isArray(g.coordinates) ? g.coordinates.length : 0]) })))
+            } finally {
+              await browser.close()
+            }
+          })().catch((error) => {
+            console.error(error)
+            process.exit(1)
+          })
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rally-maps-friday
+          path: tmp/rally-maps-friday.json
+          if-no-files-found: error
