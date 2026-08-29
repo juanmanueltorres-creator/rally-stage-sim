@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { RouteNode } from './environmentNodes.ts'
-import { buildOpenMeteoForecastUrl, normalizeOpenMeteoForecast } from './openMeteo.ts'
+import {
+  buildOpenMeteoForecastUrl,
+  fetchOpenMeteoForecast,
+  normalizeOpenMeteoForecast,
+} from './openMeteo.ts'
 
 const nodes: RouteNode[] = [
   { id: 'start', role: 'start', distanceKm: 0, coordinate: [-72.72, -37.25] },
@@ -63,4 +67,26 @@ test('buildOpenMeteoForecastUrl requests all nodes for the stage date in local t
     requestUrl.searchParams.get('hourly'),
     'temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation',
   )
+})
+
+test('fetchOpenMeteoForecast requests and normalizes the multi-location payload', async () => {
+  let requestedUrl = ''
+  const fakeFetch = async (url: string) => {
+    requestedUrl = url
+    return {
+      ok: true,
+      json: async () => payload,
+    }
+  }
+
+  const snapshots = await fetchOpenMeteoForecast(
+    nodes,
+    '2026-09-11T08:53:00-03:00',
+    'America/Santiago',
+    fakeFetch,
+  )
+
+  assert.ok(requestedUrl.startsWith('https://api.open-meteo.com/v1/forecast?'))
+  assert.equal(snapshots[0].temperatureC, 10.8)
+  assert.equal(snapshots[1].windGustKmh, 22)
 })
