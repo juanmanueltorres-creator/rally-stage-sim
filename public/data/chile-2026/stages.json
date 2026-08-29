@@ -1,0 +1,31 @@
+[
+  {
+    "id": "chile-2026-ss1-turquia-1",
+    "eventId": "chile-2026",
+    "sequence": 1,
+    "code": "SS1",
+    "name": "Turquía 1",
+    "date": "2026-09-11",
+    "scheduledStart": "2026-09-11T08:53:00-03:00",
+    "distanceKm": 22.94,
+    "surface": "unknown",
+    "geometryStatus": "pending-verification",
+    "geometry": null,
+    "provenance": {
+      "state": "planned",
+      "sources": [
+        {
+          "label": "WRC Rally Chile Bio Bío 2026 route announcement",
+          "url": "https://www.wrc.com/en/news/rally-chile-bio-bio-reveals-revamped-route-for-2026",
+          "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "Rally Chile Bio Bío September event preview",
+          "url": "https://rallychilebiobio.com/2026/08/25/lo-que-se-viene-en-septiembre/",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "Distance and first competition start are sourced. Route geometry is intentionally absent until independently verified."
+    }
+  }
+]
