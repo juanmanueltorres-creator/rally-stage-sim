@@ -58,7 +58,9 @@ export interface RallyEntry {
 
 export interface SimulatedStageRun {
   stageId: string
-  carNo: number
+  priority: string
+  carCount: number
+  startIntervalSeconds: number
   expectedDurationSeconds: number
   playbackSpeed: number
   provenance: DataProvenance
