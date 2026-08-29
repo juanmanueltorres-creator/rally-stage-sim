@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { RallyEvent, RallyStage, SimulatedStageRun } from './domain/rally'
+import type { RallyEntry, RallyEvent, RallyStage, SimulatedStageRun } from './domain/rally'
 import { RallyMap } from './components/RallyMap'
 import { buildPlannedStartGrid } from './simulation/startGrid'
 
@@ -7,6 +7,7 @@ interface AppData {
   event: RallyEvent
   stage: RallyStage
   run: SimulatedStageRun
+  entries: RallyEntry[]
 }
 
 function formatLocalStart(iso: string, timezone: string): string {
@@ -48,19 +49,21 @@ export function App() {
     async function load() {
       try {
         const base = import.meta.env.BASE_URL
-        const [eventResponse, stagesResponse, simulationResponse] = await Promise.all([
+        const [eventResponse, stagesResponse, simulationResponse, entriesResponse] = await Promise.all([
           fetch(`${base}data/chile-2026/event.json`),
           fetch(`${base}data/chile-2026/stages.json`),
           fetch(`${base}data/chile-2026/simulation.json`),
+          fetch(`${base}data/chile-2026/entries.json`),
         ])
 
-        if (!eventResponse.ok || !stagesResponse.ok || !simulationResponse.ok) {
+        if (!eventResponse.ok || !stagesResponse.ok || !simulationResponse.ok || !entriesResponse.ok) {
           throw new Error('Could not load the Chile 2026 snapshot')
         }
 
         const event = (await eventResponse.json()) as RallyEvent
         const stages = (await stagesResponse.json()) as RallyStage[]
         const runs = (await simulationResponse.json()) as SimulatedStageRun[]
+        const entries = (await entriesResponse.json()) as RallyEntry[]
         const stage = stages.find((candidate) => candidate.code === 'SS1')
 
         if (!stage) throw new Error('SS1 is missing from the Chile 2026 snapshot')
@@ -68,7 +71,7 @@ export function App() {
         const run = runs.find((candidate) => candidate.stageId === stage.id)
         if (!run) throw new Error('SS1 simulation configuration is missing')
 
-        if (!cancelled) setData({ event, stage, run })
+        if (!cancelled) setData({ event, stage, run, entries })
       } catch (cause) {
         if (!cancelled) {
           setError(cause instanceof Error ? cause.message : 'Unknown loading error')
@@ -104,7 +107,7 @@ export function App() {
     return <main className="app-shell"><p className="loading">Loading sourced rally snapshot…</p></main>
   }
 
-  const { event, stage, run } = data
+  const { event, stage, run, entries } = data
   const allSources = [...stage.provenance.sources, ...run.provenance.sources]
 
   return (
@@ -176,6 +179,28 @@ export function App() {
               <span>{slot.simulationId}</span>
               <strong>{slot.clock}</strong>
             </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="entry-roster-panel" aria-label="Official RC1 entry roster">
+        <div className="entry-roster-header">
+          <div>
+            <p className="eyebrow">OFFICIAL RC1 ENTRY ROSTER · P1</p>
+            <h2>{entries.length} Rally1 crews entered</h2>
+          </div>
+          <p>Official entry-list context only. These rows are intentionally not mapped to SIM-01…SIM-10 until an official start list defines the running order.</p>
+        </div>
+        <div className="entry-roster-grid">
+          {entries.map((entry) => (
+            <article className="entry-card" key={entry.carNo}>
+              <div className="entry-number">#{entry.carNo}</div>
+              <div>
+                <strong>{entry.driver}</strong>
+                <span>{entry.coDriver}</span>
+                <small>{entry.car}</small>
+              </div>
+            </article>
           ))}
         </div>
       </section>
