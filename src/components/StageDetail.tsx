@@ -9,7 +9,7 @@ import type {
 } from '../domain/rally'
 import { buildRouteNodes } from '../map/environmentNodes'
 import { fetchOpenMeteoForecast, type RouteEnvironmentSnapshot } from '../map/openMeteo'
-import { compareRouteWeather } from '../map/weatherComparison'
+import { buildTemperatureDeltaProfile, compareRouteWeather } from '../map/weatherComparison'
 import { summarizeRouteWeather, type StageWeatherSummary } from '../map/weatherSummary'
 import { stageShareUrl } from '../navigation/stageRoute'
 import { presentPassComparison } from '../presentation/passComparison'
@@ -17,6 +17,7 @@ import { presentStageDistance } from '../presentation/stageDistance'
 import { describeStageConditions } from '../presentation/stageExperience'
 import { buildPlannedStartGrid } from '../simulation/startGrid'
 import { RallyMap, type EnvironmentStatus } from './RallyMap'
+import { TemperatureDeltaProfile } from './TemperatureDeltaProfile'
 
 interface StagePassPair {
   firstPass: RallyScheduleStage
@@ -151,13 +152,20 @@ export function StageDetail({
     }
   }, [event.timezone, otherPass, technicalStage?.geometry])
 
-  const passComparisonView = useMemo(() => {
+  const passComparisonData = useMemo(() => {
     if (!passPair || currentEnvironment.length === 0 || otherEnvironment.length === 0) return null
     const viewingFirstPass = stage.code === passPair.firstPass.code
     const firstPassEnvironment = viewingFirstPass ? currentEnvironment : otherEnvironment
     const secondPassEnvironment = viewingFirstPass ? otherEnvironment : currentEnvironment
-    return presentPassComparison(compareRouteWeather(firstPassEnvironment, secondPassEnvironment))
+
+    return {
+      view: presentPassComparison(compareRouteWeather(firstPassEnvironment, secondPassEnvironment)),
+      temperatureProfile: buildTemperatureDeltaProfile(firstPassEnvironment, secondPassEnvironment),
+    }
   }, [currentEnvironment, otherEnvironment, passPair, stage.code])
+
+  const passComparisonView = passComparisonData?.view ?? null
+  const temperatureProfile = passComparisonData?.temperatureProfile ?? []
 
   const comparisonStatus = passComparisonView
     ? 'ready'
@@ -302,6 +310,17 @@ export function StageDetail({
             <article><span>PRECIP SIGNAL Δ</span><strong>{passComparisonView?.precipitation ?? '—'}</strong></article>
             <article><span>BIGGEST TEMP SHIFT</span><strong>{passComparisonView?.strongestShift ?? '—'}</strong></article>
           </div>
+
+          {comparisonStatus === 'ready' ? (
+            <div className="pass-temperature-profile-block">
+              <div className="pass-profile-heading">
+                <span>Δ TEMPERATURE ALONG STAGE</span>
+                <strong>PASS 2 − PASS 1</strong>
+              </div>
+              <TemperatureDeltaProfile points={temperatureProfile} />
+            </div>
+          ) : null}
+
           <p className="panel-note">Δ = Pass 2 − Pass 1. Es una comparación de señal meteorológica modelada para dos horarios; no implica cambio observado de grip, barro, polvo ni estado de la calzada.</p>
         </section>
       ) : null}
