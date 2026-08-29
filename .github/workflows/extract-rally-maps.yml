@@ -17,7 +17,7 @@ jobs:
           node-version: 22
       - name: Install browser adapter
         run: npm install --no-save puppeteer-core@24
-      - name: Test consent-gated map initialization
+      - name: Inspect current map initialization hooks
         env:
           RALLY_URL: https://www.rally-maps.com/Rally-Chile-BIOB%C3%8DO-2026
         run: |
@@ -35,32 +35,46 @@ jobs:
             try {
               const page = await browser.newPage()
               await page.setViewport({ width: 1080, height: 1024 })
-              await page.goto(process.env.RALLY_URL, { waitUntil: 'domcontentloaded', timeout: 60000 })
+              await page.goto(process.env.RALLY_URL, { waitUntil: 'networkidle2', timeout: 60000 })
+              await new Promise((resolve) => setTimeout(resolve, 3000))
+              const diagnostic = await page.evaluate(() => {
+                const storage = window.sl?.leaflet?.data?.storage
+                const controls = [...document.querySelectorAll('input,button,a,label')]
+                  .map((node) => ({
+                    tag: node.tagName,
+                    type: node.getAttribute('type'),
+                    id: node.id || null,
+                    name: node.getAttribute('name'),
+                    value: node.getAttribute('value'),
+                    className: typeof node.className === 'string' ? node.className : null,
+                    text: (node.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 160),
+                    onclick: node.getAttribute('onclick'),
+                    checked: 'checked' in node ? node.checked : null,
+                  }))
+                  .filter((entry) => /map|stage|show|rere|hualqui|turqu/i.test(`${entry.id} ${entry.name} ${entry.value} ${entry.className} ${entry.text} ${entry.onclick}`))
+                  .slice(0, 120)
 
-              try {
-                await page.waitForSelector('.fc-cta-consent', { timeout: 5000 })
-                await page.click('.fc-cta-consent')
-              } catch {}
+                const sourceOf = (fn) => {
+                  try { return typeof fn === 'function' ? fn.toString().slice(0, 5000) : null } catch { return null }
+                }
 
-              await page.waitForSelector('.cm__body', { timeout: 15000 })
-              const accepted = await page.evaluate(() => {
-                const buttons = [...document.querySelectorAll('.cm__btn')]
-                const button = buttons.find((node) => /accept all/i.test(node.textContent ?? ''))
-                if (!button) return false
-                button.click()
-                return true
+                return {
+                  stageCount: storage?.stages?.length ?? null,
+                  rawDataType: typeof storage?.rawData,
+                  rawDataKeys: storage?.rawData && typeof storage.rawData === 'object' ? Object.keys(storage.rawData).slice(0, 80) : [],
+                  initSource: sourceOf(storage?.init),
+                  addDataSource: sourceOf(storage?.addData),
+                  getStagesSource: sourceOf(storage?.getStages),
+                  initializeMapSource: sourceOf(window.sl?.leaflet?.initializeMap),
+                  controls,
+                  leafletContainerCount: document.querySelectorAll('.leaflet-control-container').length,
+                  mapLikeElements: [...document.querySelectorAll('[id],[class]')]
+                    .filter((node) => /map/i.test(`${node.id} ${typeof node.className === 'string' ? node.className : ''}`))
+                    .slice(0, 50)
+                    .map((node) => ({ tag: node.tagName, id: node.id || null, className: typeof node.className === 'string' ? node.className : null })),
+                }
               })
-              if (!accepted) throw new Error('Accept All consent button not found')
-
-              await page.waitForSelector('.leaflet-control-container', { timeout: 30000 })
-              await page.waitForNetworkIdle({ idleTime: 1000, timeout: 30000 })
-              await page.waitForFunction(() => (window?.sl?.leaflet?.data?.storage?.stages?.length ?? 0) > 0, { timeout: 30000 })
-
-              const summary = await page.evaluate(() => ({
-                stageCount: window.sl.leaflet.data.storage.stages.length,
-                stages: window.sl.leaflet.data.storage.stages.map((stage) => ({ name: stage.name, fullName: stage.fullName })),
-              }))
-              console.log(JSON.stringify(summary, null, 2))
+              console.log(JSON.stringify(diagnostic, null, 2))
             } finally {
               await browser.close()
             }
