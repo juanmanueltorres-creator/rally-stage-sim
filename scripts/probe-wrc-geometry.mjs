@@ -2,8 +2,8 @@ import { mkdir, writeFile } from 'node:fs/promises'
 
 const FEED_URL = 'https://webappsdata.wrc.com/srv/wrc/json/api/wrcsrv/queryMeta?t=%22Event%22&p=%7B%22n%22%3A%22category%22%2C%22v%22%3A%22WRC%22%7D&maxdepth=1'
 const KML_BASE_URL = 'https://webapps2.wrc.com/2020/web/live/kml'
-const TARGET = 'chile_2026'
-const OUTPUT_DIR = 'artifacts/wrc-geometry-probe'
+const TARGET = process.env.WRC_KML_TARGET || 'chile_2026'
+const OUTPUT_DIR = `artifacts/wrc-geometry-probe/${TARGET}`
 
 function metadataValue(event, name) {
   const entry = Array.isArray(event?._meta) ? event._meta.find((item) => item?.n === name) : null
@@ -25,9 +25,7 @@ function summarizeEvent(event) {
 
 async function fetchText(url) {
   const response = await fetch(url, { signal: AbortSignal.timeout(20_000) })
-  if (!response.ok) {
-    throw new Error(`${url} returned HTTP ${response.status}`)
-  }
+  if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`)
   return response.text()
 }
 
