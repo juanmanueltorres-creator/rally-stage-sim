@@ -4,8 +4,15 @@ import test from 'node:test'
 import type { RallyStage } from './rally.ts'
 
 async function loadStages(): Promise<RallyStage[]> {
-  const raw = await readFile(new URL('../../public/data/chile-2026/stages.json', import.meta.url), 'utf8')
-  return JSON.parse(raw) as RallyStage[]
+  const [baseRaw, fridayRaw] = await Promise.all([
+    readFile(new URL('../../public/data/chile-2026/stages.json', import.meta.url), 'utf8'),
+    readFile(new URL('../../public/data/chile-2026/stages-friday.json', import.meta.url), 'utf8'),
+  ])
+
+  return [
+    ...(JSON.parse(baseRaw) as RallyStage[]),
+    ...(JSON.parse(fridayRaw) as RallyStage[]),
+  ]
 }
 
 test('technical stage snapshot contains reconstructed geometry for SS1 through SS3', async () => {
