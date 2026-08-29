@@ -61,6 +61,7 @@ test('buildOpenMeteoForecastUrl requests all nodes for the stage date in local t
   assert.equal(requestUrl.searchParams.get('latitude'), '-37.25,-37.235')
   assert.equal(requestUrl.searchParams.get('longitude'), '-72.72,-72.71')
   assert.equal(requestUrl.searchParams.get('timezone'), 'America/Santiago')
+  assert.equal(requestUrl.searchParams.get('forecast_days'), '16')
   assert.equal(requestUrl.searchParams.get('start_date'), '2026-09-11')
   assert.equal(requestUrl.searchParams.get('end_date'), '2026-09-11')
   assert.equal(
