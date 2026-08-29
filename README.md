@@ -6,40 +6,60 @@ Open-source **Stage Intelligence** experiment for understanding a rally stage as
 
 ## First scenario
 
-**WRC Rally Chile Bio Bío 2026** is the first dataset. The current version exposes the full 16-stage rally schedule and uses SS1 Turquía as the first interactive stage brief.
+**WRC Rally Chile Bio Bío 2026** is the first dataset. The current version exposes the full 16-stage rally schedule and makes the Friday opening loop — SS1 Turquía, SS2 Nuevo Rere and SS3 Hualqui — available as shareable stage briefs.
 
 Current scenario:
 
 - Event: 10–13 September 2026.
 - Full schedule snapshot: 16 competitive stages / 311.70 km.
-- SS1 Turquía 1: 22.94 km official distance.
-- Planned first competition slot: 11 September 2026 at 08:53 local time.
-- Geometry state: `reconstructed`.
-- Reference LineString: ~22.90 km, map-matched from OpenStreetMap road centerlines against the organizer's PE1 Turquía competition map.
-- Shareable stage route: `#/chile-2026/ss1-turquia`.
+- Interactive Friday morning briefs:
+  - `#/chile-2026/ss1-turquia`
+  - `#/chile-2026/ss2-nuevo-rere`
+  - `#/chile-2026/ss3-hualqui`
+- Runtime interactivity is derived from loaded technical geometry through `withTechnicalAvailability`; the schedule snapshot remains an independent source snapshot rather than encoding application capability.
+- SS1 Turquía: 22.94 km, with the densest current reconstruction — ~22.90 km map-matched from OpenStreetMap road centerlines against the organizer/local competition map.
+- SS2 Nuevo Rere: WRC technical source 10.76 km; the separate schedule snapshot currently says 10.92 km. The UI exposes both rather than silently reconciling them.
+- SS3 Hualqui: WRC technical source 16.69 km; the separate schedule snapshot currently says 16.79 km. The UI exposes both rather than silently reconciling them.
+- SS2 and SS3 currently use **coarser reference-corridor reconstructions** than SS1. They are constrained by current competition-map context plus historical official road-book controls, but they are not official GPS traces and are not yet road-centerline map-matches.
+- Nuevo Rere has an additional uncertainty: WRC describes it as the former Rere run in reverse with a new start, but the exact 2026 new-start alignment still lacks a public coordinate-level source in this snapshot.
+- Hualqui is constrained as a reversed and shortened evolution of Pulpería, using historical control context in reverse with an approximate shortened endpoint.
 - First-visit editorial intro explains why a line on a map is not enough to understand a stage operationally.
-- Route-wide Open-Meteo context summarizes temperature, wind/gusts, precipitation signal and elevation from the same sampled nodes shown on the map.
+- Route-wide Open-Meteo context summarizes temperature, wind/gusts, precipitation signal and elevation from sampled nodes shown on each interactive map.
 - Stage-condition copy reports modelled signals without claiming observed grip, mud, dust or road state.
 - Spectator/access information is modelled separately from route geometry so partially known operational information stays explicit.
-- Ten generic simulated P1 vehicles remain available as an optional layer, not as the primary user experience.
+- Ten generic simulated P1 vehicles remain available on SS1 as an optional layer, not as the primary user experience. SS2 and SS3 currently expose Stage Intelligence without a calibrated movement simulation.
+
+## Geometry quality and environmental context
+
+Not every yellow line has the same evidential quality.
+
+Current geometry states are all explicitly `reconstructed`, but their reconstruction methods differ:
+
+- **SS1 Turquía:** dense road-centerline reconstruction, map-matched against current competition-map context.
+- **SS2 Nuevo Rere:** coarse corridor reconstruction. The reversed historical Rere relationship is known, but the exact new-start alignment remains pending coordinate-level verification.
+- **SS3 Hualqui:** coarse corridor reconstruction constrained by the reversed/shortened Pulpería relationship and historical official control context.
+
+The map therefore uses a source-neutral integrity message: a reconstructed line is a **reference reconstruction, not official GPS**. Stage-specific provenance explains how each line was produced.
+
+Environmental sampling inherits this limitation. Open-Meteo nodes are placed along the loaded reference geometry, so a coarser corridor yields useful regional/stage context but should not be interpreted as precise corner-by-corner meteorology.
 
 ## Spectator and access integrity
 
-The current SS1 spectator snapshot contains **event-level rules that are already published** while keeping exact SS1 access geometry pending.
+Published event-level operating rules can be reused across stages when their scope applies, while stage-specific geography remains isolated.
 
-Known operational rules loaded for SS1:
+Known operating guidance used for the Friday stages includes:
 
-- General road closure: 20:00 on the day before the stage; for SS1 this corresponds to 10 September 2026 at 20:00 local time.
+- General road closure: 20:00 on the day before the stage day.
 - Access may close earlier when spectator capacity is reached.
 - Spectator exit is only in the direction of competition and after the `Rastrillo` authorizes reopening.
-- Published safety-train offsets are represented relative to the planned first-car time:
+- Published safety-train offsets are represented relative to each stage's planned first-car time:
   - safety vehicles: T−110 min;
   - Auto 000: T−50 min;
   - FIA car: T−35 min;
   - Auto 00: T−20 min;
   - Auto 0: T−10 min.
 
-Still pending official publication for SS1:
+Still pending official stage-specific publication where applicable:
 
 - exact spectator-zone coordinates;
 - exact parking coordinates;
@@ -48,9 +68,11 @@ Still pending official publication for SS1:
 
 The application therefore shows **`PENDING OFFICIAL POINTS`** rather than manufacturing access recommendations.
 
-The GeoJSON/map contract already supports sourced `spectator-zone` and `spectator-parking` features. A point is only rendered when a coordinate actually exists in the sourced dataset; absent coordinates generate no pin. Published points will therefore become clickable map features without changing the integrity rule.
+Event-level fallback deliberately inherits only temporal/operating guidance and provenance. It does **not** inherit spectator-zone or parking coordinates from another stage. A pin from Turquía can never appear on Nuevo Rere or Hualqui just because they share the same event guidance.
 
-This deliberately separates two different dimensions of knowledge:
+The GeoJSON/map contract already supports sourced `spectator-zone` and `spectator-parking` features. A point is only rendered when a coordinate actually exists in the sourced dataset; absent coordinates generate no pin.
+
+This deliberately separates different dimensions of knowledge:
 
 > **A closure time can be known while the correct spatial access point is still unknown.**
 
@@ -60,25 +82,26 @@ This deliberately separates two different dimensions of knowledge:
 
 The simulation remains useful, but secondary to the stage brief:
 
-- Ten generic simulated P1 vehicles share one virtual stage clock.
+- SS1 currently has the movement benchmark and ten generic simulated P1 vehicles sharing one virtual stage clock.
 - Planning start grid: SIM-01 through SIM-10 at 180-second intervals, visualized at 60× playback speed.
 - The published Rally Chile 2026 entry list confirms ten RC1/Rally1 P1 crews; those official entries are displayed separately from the simulated start slots.
 - Entry-list order is **not** treated as the official SS1 running order. The current official Notice Board exposes the entry list but no SS1 start list yet.
 - An official start list, event-specific instructions or Live TV intervals override the planning model.
 - Motion benchmark: 13:46.4 from the local Rally2 PE1 winner on Turquía. It is used only to validate movement, not as a WRC Rally1 pace forecast.
+- SS2 and SS3 currently show `SIMULACIÓN PENDIENTE`; route, weather and access context do not depend on having a movement model.
 
-The reconstructed route is **not an official GPS trace**, the simulated start grid is **not an official running order**, and the motion benchmark is **not a WRC Rally1 forecast**.
+The reconstructed routes are **not official GPS traces**, the simulated start grid is **not an official running order**, and the SS1 motion benchmark is **not a WRC Rally1 forecast**.
 
 ## Environmental context
 
-- Explicit START and FINISH markers plus context nodes every 2.5 km along the reference route.
+- Explicit START and FINISH markers plus context nodes every 2.5 km along each interactive reference route.
 - Client-side Open-Meteo context for the planned stage start: temperature, 10 m wind, gusts, precipitation and returned location elevation.
 - The forecast request explicitly enables the 16-day horizon so the pre-event Chile scenario remains inside the documented forecast window.
 - The first map view intentionally contains no place-name labels.
 
 The 2.5 km node spacing is a visualization sampling interval. It does **not** claim 2.5 km meteorological resolution, and Open-Meteo values are modelled context rather than local station observations.
 
-If the forecast is outside the available model horizon or the external API is unavailable, the route, markers, access state and fleet simulation continue to work without weather values.
+If the forecast is outside the available model horizon or the external API is unavailable, route geometry, markers and access state remain usable without weather values.
 
 ## Data rule
 
@@ -92,10 +115,14 @@ Additional integrity rules:
 
 - Unknown values stay unknown.
 - Reconstructed geometry stays explicitly different from verified geometry.
+- Reconstruction method and confidence can differ by stage even when the shared state is `reconstructed`.
 - Modelled environmental context stays explicitly different from observations.
+- The precision of derived environmental sampling cannot exceed the practical quality of the reference geometry.
+- Schedule distance and technical distance remain separate when current public sources disagree.
 - Entry lists stay explicitly different from start lists.
 - Route geometry stays explicitly different from authorized spectator access.
 - A known temporal rule does not imply a known spatial access point.
+- Event-level operating guidance may be inherited; stage-specific spatial points may not.
 - Community/navigation hints do not become safety instructions without an official source.
 - Organizer, authority and race-direction instructions override the model.
 
@@ -122,6 +149,14 @@ npm run build
 
 ## Architecture
 
+Schedule and technical availability are intentionally separate:
+
+`schedule snapshot + technical stage datasets → withTechnicalAvailability → rally overview`
+
+The initial technical stage data is split so new groups of stages can be added without rewriting the original Turquía snapshot:
+
+`stages.json (SS1) + stages-friday.json (SS2/SS3) → technical stage catalog`
+
 Vehicle movement stays deliberately small and replaceable:
 
 `stageProgress → positionAlongLine → vehicleSnapshot`
@@ -130,29 +165,30 @@ The fleet layer adds scheduling without duplicating movement logic:
 
 `buildPlannedStartGrid → fleetSnapshot → buildStageGeoJson → MapLibre`
 
-Environmental context follows a separate path:
+Environmental context follows a separate path for any technical stage with geometry:
 
 `buildRouteNodes → Open-Meteo multi-location request → normalize forecast → summarize/present`
 
 Spectator/access context is an independent sourced layer:
 
-`StageSpectatorInfo → verified coordinates only → buildStageGeoJson → clickable MapLibre spectator features`
+`StageSpectatorInfo → stage-specific coordinates only → buildStageGeoJson → clickable MapLibre spectator features`
 
-That separation lets a later official start-list adapter replace generic SIM slots, a timing/split adapter replace simulated progress, a different environmental source replace Open-Meteo, or a newly published spectator guide add map points without rewriting the rest of the UI.
+That separation lets another technical stage become shareable by supplying geometry and provenance, without duplicating the stage-page implementation or modifying the source schedule snapshot.
 
 ## Sources
 
 Source URLs and access dates are stored inside the static rally dataset where applicable. Current route and context sources include:
 
-- WRC Rally Chile Bio Bío 2026 route announcement for event/stage context.
-- Rally Chile Bio Bío official 2026 Notice Board / Sportity for the currently published entry/start-list documents.
+- WRC Rally Chile Bio Bío 2026 route announcement for current stage relationships and technical-distance context.
+- Rally Chile Bio Bío official 2026 Notice Board / Sportity for currently published entry/start-list documents.
 - Rally Chile Bio Bío spectator guidance for event-level access information.
 - BioBioChile WRC Chile 2026 access guidance for the published 20:00 closure rule, capacity caveat, exit rule and safety-train timing.
 - Rally Chile Bio Bío 2026 official entry list for the ten RC1/Rally1 P1 crews.
 - FIA 2026 WRC Sporting Regulations, section 41.3, for start-interval rules. The 180-second P1 interval is a planning assumption and not an event-issued start time.
-- ANARE / Copec RallyMobil Nacimiento–Negrete 2026 PE1 Turquía competition map for route shape validation.
-- OpenStreetMap road centerlines under ODbL 1.0 for the reference LineString.
-- ANARE PE1 timing results for the motion-only benchmark.
+- ANARE / Copec RallyMobil Nacimiento–Negrete 2026 PE1 Turquía, PE2 Nuevo Rere and PE3 Hualqui competition maps as current route-shape context.
+- Rally Chile Bio Bío 2023 official road book for historical Rere and Pulpería control context used in the SS2/SS3 reference corridors.
+- OpenStreetMap road centerlines under ODbL 1.0 for the dense SS1 reference LineString. SS2/SS3 are **not** currently presented as OSM road-centerline map-matches.
+- ANARE PE1 timing results for the SS1 motion-only benchmark.
 - Open-Meteo Weather Forecast API for modelled environmental context requested at runtime.
 
 ## License
