@@ -1,0 +1,33 @@
+name: Probe Turquía Official Map
+
+on:
+  push:
+    branches:
+      - feat/chile-2026-foundation
+    paths:
+      - .github/workflows/probe-turquia-official-map.yml
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch official ANARE competition map
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p probe
+          curl --fail-with-body --silent --show-error --location \
+            'https://anarerally.cl/wp-content/uploads/2026/06/Turquia.pdf' \
+            -o probe/Turquia.pdf
+          file probe/Turquia.pdf
+          ls -lh probe/Turquia.pdf
+          pdfinfo probe/Turquia.pdf || true
+          pdftotext -layout probe/Turquia.pdf probe/Turquia.txt || true
+          sed -n '1,120p' probe/Turquia.txt || true
+
+      - name: Upload official map probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: turquia-official-map
+          path: probe/
+          retention-days: 1
