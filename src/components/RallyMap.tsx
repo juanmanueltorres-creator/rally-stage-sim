@@ -6,6 +6,7 @@ import { buildRouteNodes } from '../map/environmentNodes'
 import { presentEnvironmentSnapshot } from '../map/environmentView'
 import { fetchOpenMeteoForecast, type RouteEnvironmentSnapshot } from '../map/openMeteo'
 import { buildStageGeoJson } from '../map/stageGeoJson'
+import { describeGeometryStatus } from '../presentation/geometryStatus'
 import { fleetSnapshot } from '../simulation/fleet'
 import { buildPlannedStartGrid } from '../simulation/startGrid'
 
@@ -34,12 +35,6 @@ interface RallyMapProps {
   timezone: string
   simulationEnabled?: boolean
   onEnvironmentChange?: (snapshots: RouteEnvironmentSnapshot[], status: EnvironmentStatus) => void
-}
-
-function geometryMessage(status: StageGeometryStatus, hasGeometry: boolean): string {
-  if (!hasGeometry) return 'Geometría pendiente de verificación — no se dibuja una ruta sintética'
-  if (status === 'verified') return 'Geometría verificada disponible'
-  return 'Reconstrucción de referencia — mapa del organizador + OpenStreetMap, no GPS oficial'
 }
 
 function formatInterval(seconds: number): string {
@@ -343,11 +338,11 @@ export function RallyMap({
 
   return (
     <>
-      <section className="map-panel" aria-label="Mapa del tramo Turquía">
+      <section className="map-panel" aria-label="Mapa del tramo">
         <div ref={containerRef} className="map-canvas" />
         <div className="map-status" role="status">
           <span className="status-dot" aria-hidden="true" />
-          <span>{geometryMessage(geometryStatus, Boolean(geometry))}</span>
+          <span>{describeGeometryStatus(geometryStatus, Boolean(geometry))}</span>
           {geometry && run && simulationEnabled ? (
             <span ref={simulationRef}>
               {run.carCount} SIM {run.priority} · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×
@@ -366,7 +361,7 @@ export function RallyMap({
             <h2>START → nodos cada 2,5 km → FINISH</h2>
           </div>
           <p>
-            Muestreo espacial para visualización. Son valores modelados, no observaciones de estación ni una afirmación de resolución meteorológica de 2,5 km.
+            Muestreo espacial sobre la geometría de referencia. Son valores modelados, no observaciones de estación ni una afirmación de resolución meteorológica de 2,5 km.
           </p>
         </div>
 
@@ -404,7 +399,7 @@ export function RallyMap({
         ) : null}
 
         <p className="environment-source">
-          Fuente: <a href="https://open-meteo.com/en/docs" target="_blank" rel="noreferrer">Open-Meteo Weather Forecast API</a> · consulta en {timezone} para la hora prevista de SS1.
+          Fuente: <a href="https://open-meteo.com/en/docs" target="_blank" rel="noreferrer">Open-Meteo Weather Forecast API</a> · consulta en {timezone} para la hora prevista del tramo.
         </p>
       </section>
     </>
