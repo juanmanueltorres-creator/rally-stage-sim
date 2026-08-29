@@ -17,12 +17,14 @@ Current scenario:
   - `#/chile-2026/ss2-nuevo-rere`
   - `#/chile-2026/ss3-hualqui`
 - Runtime interactivity is derived from loaded technical geometry through `withTechnicalAvailability`; the schedule snapshot remains an independent source snapshot rather than encoding application capability.
-- SS1 Turquía: 22.94 km, with the densest current reconstruction — ~22.90 km map-matched from OpenStreetMap road centerlines against the organizer/local competition map.
+- SS1 Turquía: 22.94 km, with a dense ~22.90 km road-centerline reconstruction map-matched from OpenStreetMap against the organizer/local competition map.
 - SS2 Nuevo Rere: WRC technical source 10.76 km; the separate schedule snapshot currently says 10.92 km. The UI exposes both rather than silently reconciling them.
 - SS3 Hualqui: WRC technical source 16.69 km; the separate schedule snapshot currently says 16.79 km. The UI exposes both rather than silently reconciling them.
-- SS2 and SS3 currently use **coarser reference-corridor reconstructions** than SS1. They are constrained by current competition-map context plus historical official road-book controls, but they are not official GPS traces and are not yet road-centerline map-matches.
-- Nuevo Rere has an additional uncertainty: WRC describes it as the former Rere run in reverse with a new start, but the exact 2026 new-start alignment still lacks a public coordinate-level source in this snapshot.
-- Hualqui is constrained as a reversed and shortened evolution of Pulpería, using historical control context in reverse with an approximate shortened endpoint.
+- SS2 Nuevo Rere now uses a **286-coordinate dense current-route reference reconstruction** derived from Rally-Maps' 2026 interactive geometry. Its geodesic length is ~10.811 km, closely matching the 10.76 km WRC technical distance.
+- SS3 Hualqui now uses a **416-coordinate dense current-route reference reconstruction** derived from Rally-Maps' 2026 interactive geometry. Its geodesic length is ~16.706 km, closely matching the 16.69 km WRC technical distance.
+- Rally-Maps is an external cartographic reference, not organizer GPS. SS2 and SS3 therefore remain explicitly `reconstructed`, not `verified`.
+- Nuevo Rere's new-start alignment is now much better localized than the previous coarse corridor, but remains unverified by an organizer-issued GPS trace.
+- Hualqui's reversed/shortened relationship to Pulpería remains useful source context, while the current dense reference geometry replaces the former nine-point sketch.
 - First-visit editorial intro explains why a line on a map is not enough to understand a stage operationally.
 - Route-wide Open-Meteo context summarizes temperature, wind/gusts, precipitation signal and elevation from sampled nodes shown on each interactive map.
 - Stage-condition copy reports modelled signals without claiming observed grip, mud, dust or road state.
@@ -31,17 +33,17 @@ Current scenario:
 
 ## Geometry quality and environmental context
 
-Not every yellow line has the same evidential quality.
+Not every yellow line has the same evidential method even when all three are dense.
 
-Current geometry states are all explicitly `reconstructed`, but their reconstruction methods differ:
+Current geometry states are explicitly `reconstructed`, but their reconstruction methods differ:
 
-- **SS1 Turquía:** dense road-centerline reconstruction, map-matched against current competition-map context.
-- **SS2 Nuevo Rere:** coarse corridor reconstruction. The reversed historical Rere relationship is known, but the exact new-start alignment remains pending coordinate-level verification.
-- **SS3 Hualqui:** coarse corridor reconstruction constrained by the reversed/shortened Pulpería relationship and historical official control context.
+- **SS1 Turquía:** dense road-centerline reconstruction, map-matched from OpenStreetMap against current competition-map context.
+- **SS2 Nuevo Rere:** dense 286-coordinate current-route reference derived from Rally-Maps 2026 and cross-checked against WRC/ANARE context; ~10.811 km geodesic length versus 10.76 km technical distance.
+- **SS3 Hualqui:** dense 416-coordinate current-route reference derived from Rally-Maps 2026 and cross-checked against WRC/ANARE context; ~16.706 km geodesic length versus 16.69 km technical distance.
 
 The map therefore uses a source-neutral integrity message: a reconstructed line is a **reference reconstruction, not official GPS**. Stage-specific provenance explains how each line was produced.
 
-Environmental sampling inherits this limitation. Open-Meteo nodes are placed along the loaded reference geometry, so a coarser corridor yields useful regional/stage context but should not be interpreted as precise corner-by-corner meteorology.
+Dense geometry materially improves route shape, start/finish localization and environmental-node placement, but density alone does not establish authority. Environmental sampling still inherits the evidential quality of the route geometry: Open-Meteo values are useful stage-scale model context and should not be interpreted as observed corner-by-corner conditions.
 
 ## Spectator and access integrity
 
@@ -116,6 +118,7 @@ Additional integrity rules:
 - Unknown values stay unknown.
 - Reconstructed geometry stays explicitly different from verified geometry.
 - Reconstruction method and confidence can differ by stage even when the shared state is `reconstructed`.
+- Dense third-party geometry does not become official GPS merely because it contains many coordinates.
 - Modelled environmental context stays explicitly different from observations.
 - The precision of derived environmental sampling cannot exceed the practical quality of the reference geometry.
 - Schedule distance and technical distance remain separate when current public sources disagree.
@@ -186,8 +189,9 @@ Source URLs and access dates are stored inside the static rally dataset where ap
 - Rally Chile Bio Bío 2026 official entry list for the ten RC1/Rally1 P1 crews.
 - FIA 2026 WRC Sporting Regulations, section 41.3, for start-interval rules. The 180-second P1 interval is a planning assumption and not an event-issued start time.
 - ANARE / Copec RallyMobil Nacimiento–Negrete 2026 PE1 Turquía, PE2 Nuevo Rere and PE3 Hualqui competition maps as current route-shape context.
-- Rally Chile Bio Bío 2023 official road book for historical Rere and Pulpería control context used in the SS2/SS3 reference corridors.
-- OpenStreetMap road centerlines under ODbL 1.0 for the dense SS1 reference LineString. SS2/SS3 are **not** currently presented as OSM road-centerline map-matches.
+- Rally-Maps Rally Chile BIOBÍO 2026 interactive stage references for the dense SS2 Nuevo Rere and SS3 Hualqui reconstructed geometries. Rally-Maps is a third-party cartographic source, not organizer GPS.
+- Rally Chile Bio Bío 2023 official road book for historical Rere and Pulpería relationship/control context used as a cross-check.
+- OpenStreetMap road centerlines under ODbL 1.0 for the dense SS1 reference LineString. SS2/SS3 are not presented as OSM road-centerline map-matches.
 - ANARE PE1 timing results for the SS1 motion-only benchmark.
 - Open-Meteo Weather Forecast API for modelled environmental context requested at runtime.
 
