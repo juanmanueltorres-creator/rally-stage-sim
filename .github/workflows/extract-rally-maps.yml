@@ -17,18 +17,16 @@ jobs:
           node-version: 22
       - name: Install browser adapter
         run: npm install --no-save puppeteer-core@24
-      - name: Diagnose Rally Maps runtime
+      - name: Inspect stage storage shape
         env:
           RALLY_URL: https://www.rally-maps.com/Rally-Chile-BIOB%C3%8DO-2026
         run: |
           export PUPPETEER_EXECUTABLE_PATH="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
           test -n "$PUPPETEER_EXECUTABLE_PATH"
           node <<'NODE'
-          const fs = require('node:fs')
           const puppeteer = require('puppeteer-core')
 
           ;(async () => {
-            const failedRequests = []
             const browser = await puppeteer.launch({
               headless: true,
               executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
@@ -36,40 +34,33 @@ jobs:
             })
             try {
               const page = await browser.newPage()
-              page.on('requestfailed', (request) => failedRequests.push({ url: request.url(), error: request.failure()?.errorText ?? null }))
-              const response = await page.goto(process.env.RALLY_URL, { waitUntil: 'networkidle2', timeout: 60000 })
-              await new Promise((resolve) => setTimeout(resolve, 5000))
-              const diagnostic = await page.evaluate(() => ({
-                href: location.href,
-                title: document.title,
-                bodyText: (document.body?.innerText ?? '').slice(0, 3000),
-                hasSl: typeof window.sl !== 'undefined',
-                slKeys: typeof window.sl === 'object' && window.sl ? Object.keys(window.sl) : [],
-                leafletKeys: window.sl?.leaflet ? Object.keys(window.sl.leaflet) : [],
-                storageKeys: window.sl?.leaflet?.data?.storage ? Object.keys(window.sl.leaflet.data.storage) : [],
-                localStorageKeys: Object.keys(localStorage),
-                sessionStorageKeys: Object.keys(sessionStorage),
-                scripts: Array.from(document.scripts).map((script) => script.src).filter(Boolean),
-                htmlMentionsNuevoRere: document.documentElement.innerHTML.includes('Nuevo Rere'),
-                htmlMentionsHualqui: document.documentElement.innerHTML.includes('Hualqui'),
-              }))
-              diagnostic.status = response?.status() ?? null
-              diagnostic.failedRequests = failedRequests.slice(0, 50)
-              fs.mkdirSync('tmp', { recursive: true })
-              fs.writeFileSync('tmp/rally-maps-diagnostic.json', JSON.stringify(diagnostic, null, 2))
-              console.log(JSON.stringify({
-                status: diagnostic.status,
-                href: diagnostic.href,
-                title: diagnostic.title,
-                hasSl: diagnostic.hasSl,
-                slKeys: diagnostic.slKeys,
-                leafletKeys: diagnostic.leafletKeys,
-                storageKeys: diagnostic.storageKeys,
-                htmlMentionsNuevoRere: diagnostic.htmlMentionsNuevoRere,
-                htmlMentionsHualqui: diagnostic.htmlMentionsHualqui,
-                failedRequestCount: diagnostic.failedRequests.length,
-                scripts: diagnostic.scripts,
-              }, null, 2))
+              await page.goto(process.env.RALLY_URL, { waitUntil: 'networkidle2', timeout: 60000 })
+              await new Promise((resolve) => setTimeout(resolve, 3000))
+              const shape = await page.evaluate(() => {
+                const storage = window.sl?.leaflet?.data?.storage
+                const stages = storage?.stages
+                let getterResult = null
+                try { getterResult = storage?.getStages?.() ?? null } catch (error) { getterResult = { error: String(error) } }
+                const summarize = (value) => ({
+                  type: typeof value,
+                  isArray: Array.isArray(value),
+                  constructor: value?.constructor?.name ?? null,
+                  length: typeof value?.length === 'number' ? value.length : null,
+                  keys: value && (typeof value === 'object' || typeof value === 'function') ? Object.keys(value).slice(0, 30) : [],
+                  sample: value && (typeof value === 'object' || typeof value === 'function')
+                    ? Object.values(value).slice(0, 3).map((entry) => ({
+                        name: entry?.name ?? null,
+                        fullName: entry?.fullName ?? null,
+                        keys: entry && typeof entry === 'object' ? Object.keys(entry).slice(0, 20) : [],
+                      }))
+                    : [],
+                })
+                return {
+                  stages: summarize(stages),
+                  getterResult: summarize(getterResult),
+                }
+              })
+              console.log(JSON.stringify(shape, null, 2))
             } finally {
               await browser.close()
             }
@@ -78,8 +69,3 @@ jobs:
             process.exit(1)
           })
           NODE
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rally-maps-diagnostic
-          path: tmp/rally-maps-diagnostic.json
-          if-no-files-found: error
