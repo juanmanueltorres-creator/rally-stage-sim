@@ -2,11 +2,46 @@
   {
     "stageId": "chile-2026-ss1-turquia-1",
     "accessStatus": "pending",
-    "roadClosureText": "El organizador informa a nivel general que el ingreso del público a los tramos se cierra el día anterior a su inicio. El detalle específico de accesos de SS1 todavía está pendiente de publicación oficial.",
+    "roadClosureText": "Regla general publicada para el evento: los caminos que reciben una prueba se cierran a las 20:00 del día anterior, salvo Pelún. Para SS1 Turquía esto ubica el cierre general el jueves 10 de septiembre a las 20:00; el acceso puede cerrarse antes si se alcanza la capacidad máxima de público.",
+    "roadClosureAt": "2026-09-10T20:00:00-03:00",
+    "exitRule": "La salida de espectadores es exclusivamente en el sentido de la carrera y sólo después del paso del Auto Rastrillo al finalizar la prueba.",
+    "capacityNote": "Los horarios de acceso son referenciales: una zona puede cerrarse antes si alcanza su capacidad máxima de público.",
     "spectatorZones": [],
     "parking": [],
     "services": [],
-    "safetyNote": "Usá únicamente zonas y accesos publicados por la organización y seguí las indicaciones de seguridad y de las autoridades. Esta app no propone accesos alternativos ni atajos por el tramo competitivo.",
+    "safetyTrain": [
+      {
+        "id": "security-convoy",
+        "label": "Vehículos de seguridad",
+        "offsetMinutes": -110,
+        "description": "Comienza el recorrido del dispositivo de seguridad por todo el tramo."
+      },
+      {
+        "id": "car-000",
+        "label": "Auto 000",
+        "offsetMinutes": -50,
+        "description": "Verifica camino despejado, cintas, barreras y obstáculos inesperados."
+      },
+      {
+        "id": "fia-car",
+        "label": "Auto FIA",
+        "offsetMinutes": -35,
+        "description": "Inspección FIA previa a la largada del primer competidor."
+      },
+      {
+        "id": "car-00",
+        "label": "Auto 00",
+        "offsetMinutes": -20,
+        "description": "Comprueba que el público permanezca en zonas permitidas y que los dispositivos de seguridad estén listos."
+      },
+      {
+        "id": "car-0",
+        "label": "Auto 0",
+        "offsetMinutes": -10,
+        "description": "Última inspección y aviso previo al comienzo de la competencia."
+      }
+    ],
+    "safetyNote": "Usá únicamente zonas y accesos publicados por la organización, respetá cintas, barreras y marshals, y no cruces el tramo. Esta app no propone accesos alternativos ni atajos por el camino competitivo.",
     "provenance": {
       "state": "planned",
       "sources": [
@@ -14,9 +49,14 @@
           "label": "Rally Chile Bio Bío 2026 — Lo que se viene en septiembre",
           "url": "https://rallychilebiobio.com/2026/08/25/lo-que-se-viene-en-septiembre/",
           "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "BioBioChile — Rutas y horario de accesos WRC Chile 2026",
+          "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/25/rutas-y-horario-de-accesos-lo-que-tienes-que-saber-si-quieres-ir-a-las-rutas-del-wrc-chile-2026.shtml",
+          "accessedAt": "2026-08-29"
         }
       ],
-      "note": "General event-level spectator guidance only. SS1-specific spectator zones, parking, services and access points remain pending official publication."
+      "note": "Event-level operating rules are now loaded for SS1: general 20:00 previous-day road closure, possible earlier closure by capacity, one-way spectator exit after the Rastrillo and the published safety-train offsets. Exact SS1 spectator zones, parking and access-point coordinates remain pending official publication, so no map pins are invented."
     }
   }
 ]
