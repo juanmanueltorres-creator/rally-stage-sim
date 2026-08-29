@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { RallyEvent, RallyStage, SimulatedStageRun } from './domain/rally'
 import { RallyMap } from './components/RallyMap'
+import { buildPlannedStartGrid } from './simulation/startGrid'
 
 interface AppData {
   event: RallyEvent
@@ -16,10 +17,25 @@ function formatLocalStart(iso: string, timezone: string): string {
   }).format(new Date(iso))
 }
 
+function formatLocalClock(timestampMs: number, timezone: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: timezone,
+  }).format(new Date(timestampMs))
+}
+
 function formatDuration(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
   const remaining = seconds - minutes * 60
   return `${minutes}:${remaining.toFixed(1).padStart(4, '0')}`
+}
+
+function formatInterval(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  const remaining = seconds - minutes * 60
+  return `${minutes}:${String(remaining).padStart(2, '0')}`
 }
 
 export function App() {
@@ -71,6 +87,15 @@ export function App() {
     [data],
   )
 
+  const startSlots = useMemo(() => {
+    if (!data) return []
+    const stageStartMs = Date.parse(data.stage.scheduledStart)
+    return buildPlannedStartGrid(data.run.carCount, data.run.startIntervalSeconds).map((slot) => ({
+      ...slot,
+      clock: formatLocalClock(stageStartMs + slot.startOffsetSeconds * 1_000, data.event.timezone),
+    }))
+  }, [data])
+
   if (error) {
     return <main className="app-shell"><p className="load-error">{error}</p></main>
   }
@@ -102,7 +127,7 @@ export function App() {
           <h2>{stage.name}</h2>
           <div className="metrics">
             <div><span>DISTANCE</span><strong>{stage.distanceKm.toFixed(2)} km</strong></div>
-            <div><span>FIRST CAR</span><strong>{formatLocalStart(stage.scheduledStart, event.timezone)}</strong></div>
+            <div><span>FIRST SLOT</span><strong>{formatLocalStart(stage.scheduledStart, event.timezone)}</strong></div>
             <div><span>GEOMETRY</span><strong>{stage.geometryStatus}</strong></div>
             <div><span>SOURCES</span><strong>{sourceCount}</strong></div>
           </div>
@@ -119,13 +144,40 @@ export function App() {
         </article>
 
         <article className="stage-card">
-          <p className="eyebrow">MOTION BENCHMARK</p>
-          <h2>{formatDuration(run.expectedDurationSeconds)} · {run.playbackSpeed}× playback</h2>
+          <p className="eyebrow">SIMULATED P1 FLEET</p>
+          <h2>{run.carCount} cars · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×</h2>
           <p>
-            The motion benchmark comes from a local Rally2 run on the same PE1. It validates movement only and is not a WRC Rally1 forecast.
+            Generic P1 slots use a common stage clock. The published entry list confirms ten RC1/Rally1 P1 crews, but its order is not treated as the official running order.
           </p>
           <span className="integrity-badge">{run.provenance.state}</span>
         </article>
+
+        <article className="stage-card">
+          <p className="eyebrow">MOTION BENCHMARK</p>
+          <h2>{formatDuration(run.expectedDurationSeconds)} reference pace</h2>
+          <p>
+            The motion benchmark comes from a local Rally2 run on the same PE1. It validates movement only and is not a WRC Rally1 forecast.
+          </p>
+          <span className="integrity-badge">benchmark only</span>
+        </article>
+      </section>
+
+      <section className="start-grid-panel" aria-label="Simulated P1 start grid">
+        <div className="start-grid-header">
+          <div>
+            <p className="eyebrow">SIMULATED START GRID · {run.priority}</p>
+            <h2>{formatInterval(run.startIntervalSeconds)} planning interval</h2>
+          </div>
+          <p>Generic slots only. Official entry-list order ≠ official start order. Event start lists and instructions override this model.</p>
+        </div>
+        <div className="start-grid-slots">
+          {startSlots.map((slot) => (
+            <div className="start-slot" key={slot.simulationId}>
+              <span>{slot.simulationId}</span>
+              <strong>{slot.clock}</strong>
+            </div>
+          ))}
+        </div>
       </section>
 
       <RallyMap
