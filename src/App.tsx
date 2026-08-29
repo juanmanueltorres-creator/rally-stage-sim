@@ -5,9 +5,10 @@ import type {
   RallyScheduleStage,
   RallyStage,
   SimulatedStageRun,
+  StageRouteReuse,
   StageSpectatorInfo,
 } from './domain/rally'
-import { withTechnicalAvailability } from './domain/stageCatalog'
+import { materializeTechnicalStages, withTechnicalAvailability } from './domain/stageCatalog'
 import { normalizeSpectatorInfo } from './domain/spectator'
 import { parseAppRoute, type AppRoute } from './navigation/stageRoute'
 import { hasSeenIntro, markIntroSeen } from './presentation/introPreference'
@@ -57,6 +58,7 @@ export function App() {
           stagesResponse,
           fridayStagesResponse,
           scheduleResponse,
+          routeReuseResponse,
           simulationResponse,
           entriesResponse,
           spectatorResponse,
@@ -65,6 +67,7 @@ export function App() {
           fetch(`${base}data/chile-2026/stages.json`),
           fetch(`${base}data/chile-2026/stages-friday.json`),
           fetch(`${base}data/chile-2026/schedule.json`),
+          fetch(`${base}data/chile-2026/stage-route-reuse.json`),
           fetch(`${base}data/chile-2026/simulation.json`),
           fetch(`${base}data/chile-2026/entries.json`),
           fetch(`${base}data/chile-2026/spectator.json`),
@@ -75,6 +78,7 @@ export function App() {
           !stagesResponse.ok ||
           !fridayStagesResponse.ok ||
           !scheduleResponse.ok ||
+          !routeReuseResponse.ok ||
           !simulationResponse.ok ||
           !entriesResponse.ok ||
           !spectatorResponse.ok
@@ -82,11 +86,13 @@ export function App() {
           throw new Error('No se pudo cargar el snapshot de Rally Chile 2026')
         }
 
-        const technicalStages = [
+        const sourceTechnicalStages = [
           ...((await stagesResponse.json()) as RallyStage[]),
           ...((await fridayStagesResponse.json()) as RallyStage[]),
         ]
         const scheduleSnapshot = (await scheduleResponse.json()) as RallyScheduleStage[]
+        const routeReuse = (await routeReuseResponse.json()) as StageRouteReuse[]
+        const technicalStages = materializeTechnicalStages(scheduleSnapshot, sourceTechnicalStages, routeReuse)
 
         const loaded: AppData = {
           event: (await eventResponse.json()) as RallyEvent,
