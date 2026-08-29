@@ -14,23 +14,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Probe WRC Chile 2026 metadata
+      - name: Capture Rally-Maps stage page
         shell: bash
         run: |
-          set +e
-          code=$(curl --max-time 10 -L -sS -o /tmp/events.json -w "%{http_code}" "https://webappsdata.wrc.com/srv/wrc/json/api/wrcsrv/queryMeta?t=%22Event%22&p=%7B%22n%22%3A%22category%22%2C%22v%22%3A%22WRC%22%7D&maxdepth=1")
-          echo "event metadata HTTP=$code bytes=$(wc -c </tmp/events.json 2>/dev/null || echo 0)"
-          if [ "$code" = "200" ]; then
-            python3 - <<'PY'
-          import json
-          with open('/tmp/events.json', encoding='utf-8') as handle:
-              events = json.load(handle)
-          for event in events:
-              meta = {item.get('n'): item.get('v') for item in event.get('_meta', [])}
-              if meta.get('sas-eventid') == '646':
-                  print('CHILE_2026_META=' + json.dumps(meta, ensure_ascii=False, sort_keys=True))
-          PY
-          fi
+          set -e
+          curl --max-time 15 -L -sS -A "Mozilla/5.0" \
+            "https://www.rally-maps.com/Rally-Chile-BIOB%C3%8DO-2026/Turqu%C3%ADa" \
+            -o /tmp/rally-maps-turquia.html
+          echo "Rally-Maps HTML bytes=$(wc -c </tmp/rally-maps-turquia.html)"
+          grep -oE '<script[^>]+src="[^"]+"' /tmp/rally-maps-turquia.html | head -30 || true
+
+      - name: Upload Rally-Maps probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: rally-maps-probe
+          path: /tmp/rally-maps-turquia.html
+          retention-days: 1
 
       - name: Setup Node
         uses: actions/setup-node@v4
