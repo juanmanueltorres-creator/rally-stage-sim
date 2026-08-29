@@ -7,6 +7,7 @@ import type {
   SimulatedStageRun,
   StageSpectatorInfo,
 } from './domain/rally'
+import { withTechnicalAvailability } from './domain/stageCatalog'
 import { normalizeSpectatorInfo } from './domain/spectator'
 import { parseAppRoute, type AppRoute } from './navigation/stageRoute'
 import { hasSeenIntro, markIntroSeen } from './presentation/introPreference'
@@ -51,9 +52,18 @@ export function App() {
     async function load() {
       try {
         const base = import.meta.env.BASE_URL
-        const [eventResponse, stagesResponse, scheduleResponse, simulationResponse, entriesResponse, spectatorResponse] = await Promise.all([
+        const [
+          eventResponse,
+          stagesResponse,
+          fridayStagesResponse,
+          scheduleResponse,
+          simulationResponse,
+          entriesResponse,
+          spectatorResponse,
+        ] = await Promise.all([
           fetch(`${base}data/chile-2026/event.json`),
           fetch(`${base}data/chile-2026/stages.json`),
+          fetch(`${base}data/chile-2026/stages-friday.json`),
           fetch(`${base}data/chile-2026/schedule.json`),
           fetch(`${base}data/chile-2026/simulation.json`),
           fetch(`${base}data/chile-2026/entries.json`),
@@ -63,6 +73,7 @@ export function App() {
         if (
           !eventResponse.ok ||
           !stagesResponse.ok ||
+          !fridayStagesResponse.ok ||
           !scheduleResponse.ok ||
           !simulationResponse.ok ||
           !entriesResponse.ok ||
@@ -71,10 +82,16 @@ export function App() {
           throw new Error('No se pudo cargar el snapshot de Rally Chile 2026')
         }
 
+        const technicalStages = [
+          ...((await stagesResponse.json()) as RallyStage[]),
+          ...((await fridayStagesResponse.json()) as RallyStage[]),
+        ]
+        const scheduleSnapshot = (await scheduleResponse.json()) as RallyScheduleStage[]
+
         const loaded: AppData = {
           event: (await eventResponse.json()) as RallyEvent,
-          technicalStages: (await stagesResponse.json()) as RallyStage[],
-          schedule: (await scheduleResponse.json()) as RallyScheduleStage[],
+          technicalStages,
+          schedule: withTechnicalAvailability(scheduleSnapshot, technicalStages),
           runs: (await simulationResponse.json()) as SimulatedStageRun[],
           entries: (await entriesResponse.json()) as RallyEntry[],
           spectator: (await spectatorResponse.json()) as StageSpectatorInfo[],
