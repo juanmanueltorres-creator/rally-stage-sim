@@ -33,6 +33,14 @@ export interface RouteEnvironmentSnapshot {
   precipitationMm: number | null
 }
 
+interface FetchResponseLike {
+  ok: boolean
+  status?: number
+  json(): Promise<unknown>
+}
+
+type FetchLike = (url: string) => Promise<FetchResponseLike>
+
 function wallClockMinutes(value: string): number {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
   if (!match) return Number.NaN
@@ -112,4 +120,24 @@ export function normalizeOpenMeteoForecast(
       precipitationMm: valueAt(hourly?.precipitation, timeIndex),
     }
   })
+}
+
+export async function fetchOpenMeteoForecast(
+  nodes: RouteNode[],
+  targetIso: string,
+  timezone: string,
+  fetcher: FetchLike = (url) => fetch(url),
+): Promise<RouteEnvironmentSnapshot[]> {
+  const requestUrl = buildOpenMeteoForecastUrl(nodes, targetIso, timezone)
+  const response = await fetcher(requestUrl)
+
+  if (!response.ok) {
+    const statusSuffix = response.status ? ` (${response.status})` : ''
+    throw new Error(`Open-Meteo forecast request failed${statusSuffix}`)
+  }
+
+  const rawPayload = await response.json()
+  const payload = (Array.isArray(rawPayload) ? rawPayload : [rawPayload]) as OpenMeteoLocationPayload[]
+
+  return normalizeOpenMeteoForecast(nodes, payload, targetIso)
 }
