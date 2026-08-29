@@ -17,18 +17,16 @@ jobs:
           node-version: 22
       - name: Install browser adapter
         run: npm install --no-save puppeteer-core@24
-      - name: Activate Friday map and extract stage geometry
+      - name: Inspect show-in-map handler
         env:
           RALLY_URL: https://www.rally-maps.com/Rally-Chile-BIOB%C3%8DO-2026
         run: |
           export PUPPETEER_EXECUTABLE_PATH="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
           test -n "$PUPPETEER_EXECUTABLE_PATH"
           node <<'NODE'
-          const fs = require('node:fs')
           const puppeteer = require('puppeteer-core')
 
           ;(async () => {
-            const dataResponses = []
             const browser = await puppeteer.launch({
               headless: true,
               executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
@@ -37,59 +35,64 @@ jobs:
             try {
               const page = await browser.newPage()
               await page.setViewport({ width: 1080, height: 1024 })
-              page.on('response', (response) => {
-                const request = response.request()
-                if (['xhr', 'fetch'].includes(request.resourceType()) && response.url().includes('rally-maps.com')) {
-                  dataResponses.push({ status: response.status(), url: response.url() })
+              await page.goto(process.env.RALLY_URL, { waitUntil: 'networkidle2', timeout: 60000 })
+              await page.waitForSelector('.clust_d20260911.showInMap', { timeout: 15000 })
+
+              const diagnostic = await page.evaluate(async () => {
+                const target = document.querySelector('.clust_d20260911.showInMap')
+                const eventSummary = (node) => {
+                  if (!node || !window.jQuery?._data) return null
+                  const events = window.jQuery._data(node, 'events') || {}
+                  return Object.fromEntries(Object.entries(events).map(([type, handlers]) => [
+                    type,
+                    handlers.map((handler) => ({
+                      selector: handler.selector ?? null,
+                      namespace: handler.namespace ?? null,
+                      source: typeof handler.handler === 'function' ? handler.handler.toString().slice(0, 2500) : null,
+                    })),
+                  ]))
+                }
+
+                const ownScripts = Array.from(document.scripts)
+                  .map((script) => script.src)
+                  .filter((src) => src && new URL(src, location.href).origin === location.origin)
+
+                const snippets = []
+                for (const src of ownScripts) {
+                  try {
+                    const text = await fetch(src).then((response) => response.text())
+                    let index = 0
+                    while ((index = text.indexOf('showInMap', index)) !== -1 && snippets.length < 30) {
+                      snippets.push({
+                        src,
+                        snippet: text.slice(Math.max(0, index - 900), Math.min(text.length, index + 1800)),
+                      })
+                      index += 9
+                    }
+                  } catch {}
+                }
+
+                const ancestorChain = []
+                let node = target
+                for (let depth = 0; node && depth < 6; depth += 1, node = node.parentElement) {
+                  ancestorChain.push({
+                    tag: node.tagName,
+                    id: node.id || null,
+                    className: typeof node.className === 'string' ? node.className : null,
+                    outerHTML: node.outerHTML.slice(0, 5000),
+                    events: eventSummary(node),
+                  })
+                }
+
+                return {
+                  ancestorChain,
+                  documentEvents: eventSummary(document),
+                  bodyEvents: eventSummary(document.body),
+                  snippets,
                 }
               })
 
-              await page.goto(process.env.RALLY_URL, { waitUntil: 'networkidle2', timeout: 60000 })
-              await page.waitForSelector('.clust_d20260911.showInMap', { timeout: 15000 })
-              await page.click('.clust_d20260911.showInMap')
-
-              await page.waitForSelector('.leaflet-control-container', { timeout: 30000 })
-              await page.waitForFunction(
-                () => (window?.sl?.leaflet?.data?.storage?.stages?.length ?? 0) > 0,
-                { timeout: 30000 },
-              )
-
-              const extracted = await page.evaluate(() => {
-                const stages = window.sl.leaflet.data.storage.stages
-                return stages
-                  .filter((stage) => /Nuevo Rere|Hualqui/i.test(`${stage.name ?? ''} ${stage.fullName ?? ''}`))
-                  .map((stage) => ({
-                    id: stage.id ?? null,
-                    name: stage.name ?? null,
-                    fullName: stage.fullName ?? null,
-                    distance: stage.distance ?? stage.length ?? null,
-                    geometries: (stage.geometries ?? []).map((entry) => ({
-                      type: entry.type ?? null,
-                      coordinates: entry.geometry?.coordinates ?? null,
-                    })),
-                  }))
-              })
-
-              if (extracted.length < 2) {
-                throw new Error(`Expected Nuevo Rere and Hualqui, got ${extracted.map((stage) => stage.name).join(', ')}`)
-              }
-
-              fs.mkdirSync('tmp', { recursive: true })
-              fs.writeFileSync('tmp/rally-maps-friday.json', JSON.stringify(extracted, null, 2))
-              console.log(JSON.stringify({
-                stageCount: await page.evaluate(() => window.sl.leaflet.data.storage.stages.length),
-                extracted: extracted.map((stage) => ({
-                  id: stage.id,
-                  name: stage.name,
-                  fullName: stage.fullName,
-                  distance: stage.distance,
-                  geometries: stage.geometries.map((geometry) => ({
-                    type: geometry.type,
-                    coordinateCount: Array.isArray(geometry.coordinates) ? geometry.coordinates.length : 0,
-                  })),
-                })),
-                dataResponses,
-              }, null, 2))
+              console.log(JSON.stringify(diagnostic, null, 2))
             } finally {
               await browser.close()
             }
@@ -98,8 +101,3 @@ jobs:
             process.exit(1)
           })
           NODE
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rally-maps-friday
-          path: tmp/rally-maps-friday.json
-          if-no-files-found: error
