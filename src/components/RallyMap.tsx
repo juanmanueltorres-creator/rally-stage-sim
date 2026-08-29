@@ -1,7 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl'
 import type { SimulatedStageRun, StageGeometryStatus, StageLineString } from '../domain/rally'
+import { buildRouteNodes } from '../map/environmentNodes'
+import { presentEnvironmentSnapshot } from '../map/environmentView'
+import { fetchOpenMeteoForecast, type RouteEnvironmentSnapshot } from '../map/openMeteo'
 import { buildStageGeoJson } from '../map/stageGeoJson'
 import { vehicleSnapshot } from '../simulation/vehicle'
 
@@ -19,10 +22,14 @@ const MAP_STYLE: StyleSpecification = {
   ],
 }
 
+type EnvironmentStatus = 'idle' | 'loading' | 'ready' | 'unavailable'
+
 interface RallyMapProps {
   geometryStatus: StageGeometryStatus
   geometry: StageLineString | null
   run: SimulatedStageRun | null
+  scheduledStart: string
+  timezone: string
 }
 
 function geometryMessage(status: StageGeometryStatus, hasGeometry: boolean): string {
@@ -31,9 +38,50 @@ function geometryMessage(status: StageGeometryStatus, hasGeometry: boolean): str
   return 'Reference reconstruction — organizer map + OpenStreetMap, not an official GPS trace'
 }
 
-export function RallyMap({ geometryStatus, geometry, run }: RallyMapProps) {
+export function RallyMap({
+  geometryStatus,
+  geometry,
+  run,
+  scheduledStart,
+  timezone,
+}: RallyMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const simulationRef = useRef<HTMLSpanElement | null>(null)
+  const nodes = useMemo(() => (geometry ? buildRouteNodes(geometry, 2.5) : []), [geometry])
+  const [environment, setEnvironment] = useState<RouteEnvironmentSnapshot[]>([])
+  const [environmentStatus, setEnvironmentStatus] = useState<EnvironmentStatus>('idle')
+
+  const environmentCards = useMemo(
+    () => environment.map((snapshot) => ({ snapshot, view: presentEnvironmentSnapshot(snapshot) })),
+    [environment],
+  )
+
+  useEffect(() => {
+    if (!geometry || nodes.length === 0) {
+      setEnvironment([])
+      setEnvironmentStatus('idle')
+      return
+    }
+
+    let cancelled = false
+    setEnvironmentStatus('loading')
+
+    void fetchOpenMeteoForecast(nodes, scheduledStart, timezone)
+      .then((snapshots) => {
+        if (cancelled) return
+        setEnvironment(snapshots)
+        setEnvironmentStatus('ready')
+      })
+      .catch(() => {
+        if (cancelled) return
+        setEnvironment([])
+        setEnvironmentStatus('unavailable')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [geometry, nodes, scheduledStart, timezone])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -53,7 +101,7 @@ export function RallyMap({ geometryStatus, geometry, run }: RallyMapProps) {
     map.on('load', () => {
       if (!geometry || !run) return
 
-      const sourceData = buildStageGeoJson(geometry, geometry.coordinates[0], geometryStatus)
+      const sourceData = buildStageGeoJson(geometry, geometry.coordinates[0], geometryStatus, nodes)
 
       map.addSource('stage-simulation', {
         type: 'geojson',
@@ -69,6 +117,45 @@ export function RallyMap({ geometryStatus, geometry, run }: RallyMapProps) {
           'line-color': '#ffd54a',
           'line-width': 4,
           'line-opacity': 0.92,
+        },
+      })
+
+      map.addLayer({
+        id: 'environment-nodes',
+        type: 'circle',
+        source: 'stage-simulation',
+        filter: ['==', ['get', 'kind'], 'environment-node'],
+        paint: {
+          'circle-radius': 4,
+          'circle-color': '#7bdff2',
+          'circle-stroke-color': '#081014',
+          'circle-stroke-width': 2,
+        },
+      })
+
+      map.addLayer({
+        id: 'stage-start',
+        type: 'circle',
+        source: 'stage-simulation',
+        filter: ['==', ['get', 'kind'], 'stage-start'],
+        paint: {
+          'circle-radius': 7,
+          'circle-color': '#6ee7a8',
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 2,
+        },
+      })
+
+      map.addLayer({
+        id: 'stage-finish',
+        type: 'circle',
+        source: 'stage-simulation',
+        filter: ['==', ['get', 'kind'], 'stage-finish'],
+        paint: {
+          'circle-radius': 7,
+          'circle-color': '#f5f5f2',
+          'circle-stroke-color': '#ff6a4a',
+          'circle-stroke-width': 3,
         },
       })
 
@@ -101,7 +188,7 @@ export function RallyMap({ geometryStatus, geometry, run }: RallyMapProps) {
         const snapshot = vehicleSnapshot(geometry, 0, expectedDurationMs, virtualElapsedMs)
         const source = map.getSource('stage-simulation') as GeoJSONSource | undefined
 
-        source?.setData(buildStageGeoJson(geometry, snapshot.coordinate, geometryStatus))
+        source?.setData(buildStageGeoJson(geometry, snapshot.coordinate, geometryStatus, nodes))
 
         if (simulationRef.current) {
           simulationRef.current.textContent = `SIM CAR · ${run.playbackSpeed}× · ${(snapshot.progress * 100).toFixed(1)}%`
@@ -117,16 +204,67 @@ export function RallyMap({ geometryStatus, geometry, run }: RallyMapProps) {
       if (animationFrameId !== null) cancelAnimationFrame(animationFrameId)
       map.remove()
     }
-  }, [geometry, geometryStatus, run])
+  }, [geometry, geometryStatus, nodes, run])
 
   return (
-    <section className="map-panel" aria-label="Turquía rally stage simulation">
-      <div ref={containerRef} className="map-canvas" />
-      <div className="map-status" role="status">
-        <span className="status-dot" aria-hidden="true" />
-        <span>{geometryMessage(geometryStatus, Boolean(geometry))}</span>
-        {geometry && run ? <span ref={simulationRef}>SIM CAR · {run.playbackSpeed}× · 0.0%</span> : null}
-      </div>
-    </section>
+    <>
+      <section className="map-panel" aria-label="Turquía rally stage simulation">
+        <div ref={containerRef} className="map-canvas" />
+        <div className="map-status" role="status">
+          <span className="status-dot" aria-hidden="true" />
+          <span>{geometryMessage(geometryStatus, Boolean(geometry))}</span>
+          {geometry && run ? <span ref={simulationRef}>SIM CAR · {run.playbackSpeed}× · 0.0%</span> : null}
+        </div>
+      </section>
+
+      <section className="environment-panel" aria-label="Modelled environmental route context">
+        <div className="environment-header">
+          <div>
+            <p className="eyebrow">MODELLED ROUTE CONTEXT · OPEN-METEO</p>
+            <h2>START → 2.5 km nodes → FINISH</h2>
+          </div>
+          <p>
+            Spatial sampling for visualization. Weather values are modelled context, not station observations or 2.5 km meteorological resolution.
+          </p>
+        </div>
+
+        {environmentStatus === 'loading' ? (
+          <p className="environment-state">Loading forecast context for the planned stage start…</p>
+        ) : null}
+
+        {environmentStatus === 'unavailable' ? (
+          <p className="environment-state environment-state--warning">
+            Forecast context is outside the available model horizon or temporarily unavailable. Route nodes remain valid.
+          </p>
+        ) : null}
+
+        {environmentStatus === 'ready' ? (
+          <div className="environment-grid">
+            {environmentCards.map(({ snapshot, view }) => (
+              <article
+                className={`environment-node-card${snapshot.node.role !== 'context' ? ' environment-node-card--terminal' : ''}`}
+                key={snapshot.node.id}
+              >
+                <div className="environment-node-heading">
+                  <strong>{view.position}</strong>
+                  <span>{view.validAt}</span>
+                </div>
+                <div className="environment-node-values">
+                  <div><span>TEMP</span><strong>{view.temperature}</strong></div>
+                  <div><span>WIND</span><strong>{view.wind}</strong></div>
+                  <div><span>GUST</span><strong>{view.gust}</strong></div>
+                  <div><span>ELEV</span><strong>{view.elevation}</strong></div>
+                  <div><span>PRECIP</span><strong>{view.precipitation}</strong></div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : null}
+
+        <p className="environment-source">
+          Source: <a href="https://open-meteo.com/en/docs" target="_blank" rel="noreferrer">Open-Meteo Weather Forecast API</a> · requested in {timezone} for the planned SS1 start.
+        </p>
+      </section>
+    </>
   )
 }
