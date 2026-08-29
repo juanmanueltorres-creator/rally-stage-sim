@@ -10,6 +10,24 @@ function mergeSources(...sourceGroups: DataSource[][]): DataSource[] {
   return [...byUrl.values()]
 }
 
+export interface RouteReusePair {
+  firstPassCode: string
+  secondPassCode: string
+}
+
+export function findRouteReusePair(
+  stageCode: string,
+  routeReuse: StageRouteReuse[],
+): RouteReusePair | null {
+  const mapping = routeReuse.find(
+    (candidate) => candidate.stageCode === stageCode || candidate.sourceStageCode === stageCode,
+  )
+
+  return mapping
+    ? { firstPassCode: mapping.sourceStageCode, secondPassCode: mapping.stageCode }
+    : null
+}
+
 export function materializeTechnicalStages(
   schedule: RallyScheduleStage[],
   technicalStages: RallyStage[],
