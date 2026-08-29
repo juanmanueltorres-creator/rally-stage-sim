@@ -89,6 +89,7 @@ export function buildOpenMeteoForecastUrl(
     longitude: nodes.map((node) => node.coordinate[0]).join(','),
     hourly: HOURLY_VARIABLES.join(','),
     timezone,
+    forecast_days: '16',
     start_date: date,
     end_date: date,
   })
