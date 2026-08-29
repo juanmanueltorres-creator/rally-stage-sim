@@ -14,26 +14,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Capture Rally-Maps map bundle
+      - name: Capture Rally-Maps stage geometry payload
         shell: bash
         run: |
           set -e
           curl --max-time 15 -L -sS -A "Mozilla/5.0" \
-            "https://www.rally-maps.com/rm2/js/dist/bundle/scripts-leafletmap-bundle.min.js?v=2.344" \
-            -o /tmp/scripts-leafletmap-bundle.min.js
-          curl --max-time 15 -L -sS -A "Mozilla/5.0" \
-            "https://www.rally-maps.com/rm2/js/dist/bundle/scripts-nomap-bundle.min.js?v=2.344" \
-            -o /tmp/scripts-nomap-bundle.min.js
-          echo "leaflet bundle bytes=$(wc -c </tmp/scripts-leafletmap-bundle.min.js)"
-          grep -oE '/rm2/rest/[A-Za-z0-9_/?=&{}.%:-]+' /tmp/scripts-leafletmap-bundle.min.js | sort -u | head -50 || true
+            "https://www.rally-maps.com/rm2/rest/geodata/related/stage/288420/mapobjects" \
+            -o /tmp/turquia-mapobjects.json
+          echo "mapobjects bytes=$(wc -c </tmp/turquia-mapobjects.json)"
+          head -c 240 /tmp/turquia-mapobjects.json || true
+          echo
 
-      - name: Upload Rally-Maps bundle probe
+      - name: Upload Turquía geometry payload
         uses: actions/upload-artifact@v4
         with:
-          name: rally-maps-bundle-probe
-          path: |
-            /tmp/scripts-leafletmap-bundle.min.js
-            /tmp/scripts-nomap-bundle.min.js
+          name: turquia-mapobjects
+          path: /tmp/turquia-mapobjects.json
           retention-days: 1
 
       - name: Setup Node
