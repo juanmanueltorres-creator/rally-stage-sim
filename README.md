@@ -6,44 +6,51 @@ Open-source **Stage Intelligence** experiment for understanding a rally stage as
 
 ## First scenario
 
-**WRC Rally Chile Bio Bío 2026** is the first dataset. The current version exposes the full 16-stage rally schedule and makes the Friday opening loop — SS1 Turquía, SS2 Nuevo Rere and SS3 Hualqui — available as shareable stage briefs.
+**WRC Rally Chile Bio Bío 2026** is the first dataset. The current version exposes the full 16-stage rally schedule and makes **all six Friday stages — SS1 through SS6 — available as shareable stage briefs**.
 
 Current scenario:
 
 - Event: 10–13 September 2026.
 - Full schedule snapshot: 16 competitive stages / 311.70 km.
-- Interactive Friday morning briefs:
+- Interactive Friday briefs:
   - `#/chile-2026/ss1-turquia`
   - `#/chile-2026/ss2-nuevo-rere`
   - `#/chile-2026/ss3-hualqui`
+  - `#/chile-2026/ss4-turquia`
+  - `#/chile-2026/ss5-nuevo-rere`
+  - `#/chile-2026/ss6-hualqui`
 - Runtime interactivity is derived from loaded technical geometry through `withTechnicalAvailability`; the schedule snapshot remains an independent source snapshot rather than encoding application capability.
-- SS1 Turquía: 22.94 km, with a dense ~22.90 km road-centerline reconstruction map-matched from OpenStreetMap against the organizer/local competition map.
-- SS2 Nuevo Rere: WRC technical source 10.76 km; the separate schedule snapshot currently says 10.92 km. The UI exposes both rather than silently reconciling them.
-- SS3 Hualqui: WRC technical source 16.69 km; the separate schedule snapshot currently says 16.79 km. The UI exposes both rather than silently reconciling them.
-- SS2 Nuevo Rere now uses a **286-coordinate dense current-route reference reconstruction** derived from Rally-Maps' 2026 interactive geometry. Its geodesic length is ~10.811 km, closely matching the 10.76 km WRC technical distance.
-- SS3 Hualqui now uses a **416-coordinate dense current-route reference reconstruction** derived from Rally-Maps' 2026 interactive geometry. Its geodesic length is ~16.706 km, closely matching the 16.69 km WRC technical distance.
-- Rally-Maps is an external cartographic reference, not organizer GPS. SS2 and SS3 therefore remain explicitly `reconstructed`, not `verified`.
+- WRC states that each of Friday's three stages is run twice. `stage-route-reuse.json` therefore maps SS4→SS1, SS5→SS2 and SS6→SS3 without duplicating route coordinates.
+- Each repeated stage keeps its own identity and planned start time, so environmental context is requested for the afternoon pass rather than reusing the morning forecast: SS4 15:09, SS5 16:04 and SS6 16:52 local time.
+- SS1 / SS4 Turquía: 22.94 km, with a dense ~22.90 km road-centerline reconstruction map-matched from OpenStreetMap against the organizer/local competition map.
+- SS2 / SS5 Nuevo Rere: WRC technical source 10.76 km; the separate schedule snapshot currently says 10.92 km. The UI exposes both rather than silently reconciling them.
+- SS3 / SS6 Hualqui: WRC technical source 16.69 km; the separate schedule snapshot currently says 16.79 km. The UI exposes both rather than silently reconciling them.
+- SS2 / SS5 Nuevo Rere use a **286-coordinate dense current-route reference reconstruction** derived from Rally-Maps' 2026 interactive geometry. Its geodesic length is ~10.811 km, closely matching the 10.76 km WRC technical distance.
+- SS3 / SS6 Hualqui use a **416-coordinate dense current-route reference reconstruction** derived from Rally-Maps' 2026 interactive geometry. Its geodesic length is ~16.706 km, closely matching the 16.69 km WRC technical distance.
+- Rally-Maps is an external cartographic reference, not organizer GPS. These routes therefore remain explicitly `reconstructed`, not `verified`.
 - Nuevo Rere's new-start alignment is now much better localized than the previous coarse corridor, but remains unverified by an organizer-issued GPS trace.
 - Hualqui's reversed/shortened relationship to Pulpería remains useful source context, while the current dense reference geometry replaces the former nine-point sketch.
 - First-visit editorial intro explains why a line on a map is not enough to understand a stage operationally.
 - Route-wide Open-Meteo context summarizes temperature, wind/gusts, precipitation signal and elevation from sampled nodes shown on each interactive map.
 - Stage-condition copy reports modelled signals without claiming observed grip, mud, dust or road state.
 - Spectator/access information is modelled separately from route geometry so partially known operational information stays explicit.
-- Ten generic simulated P1 vehicles remain available on SS1 as an optional layer, not as the primary user experience. SS2 and SS3 currently expose Stage Intelligence without a calibrated movement simulation.
+- Ten generic simulated P1 vehicles remain available on SS1 as an optional layer, not as the primary user experience. SS2–SS6 currently expose Stage Intelligence without a calibrated movement simulation.
 
 ## Geometry quality and environmental context
 
-Not every yellow line has the same evidential method even when all three are dense.
+Not every yellow line has the same evidential method even when the Friday route set is dense.
 
 Current geometry states are explicitly `reconstructed`, but their reconstruction methods differ:
 
-- **SS1 Turquía:** dense road-centerline reconstruction, map-matched from OpenStreetMap against current competition-map context.
-- **SS2 Nuevo Rere:** dense 286-coordinate current-route reference derived from Rally-Maps 2026 and cross-checked against WRC/ANARE context; ~10.811 km geodesic length versus 10.76 km technical distance.
-- **SS3 Hualqui:** dense 416-coordinate current-route reference derived from Rally-Maps 2026 and cross-checked against WRC/ANARE context; ~16.706 km geodesic length versus 16.69 km technical distance.
+- **SS1 / SS4 Turquía:** dense road-centerline reconstruction, map-matched from OpenStreetMap against current competition-map context.
+- **SS2 / SS5 Nuevo Rere:** dense 286-coordinate current-route reference derived from Rally-Maps 2026 and cross-checked against WRC/ANARE context; ~10.811 km geodesic length versus 10.76 km technical distance.
+- **SS3 / SS6 Hualqui:** dense 416-coordinate current-route reference derived from Rally-Maps 2026 and cross-checked against WRC/ANARE context; ~16.706 km geodesic length versus 16.69 km technical distance.
 
 The map therefore uses a source-neutral integrity message: a reconstructed line is a **reference reconstruction, not official GPS**. Stage-specific provenance explains how each line was produced.
 
 Dense geometry materially improves route shape, start/finish localization and environmental-node placement, but density alone does not establish authority. Environmental sampling still inherits the evidential quality of the route geometry: Open-Meteo values are useful stage-scale model context and should not be interpreted as observed corner-by-corner conditions.
+
+A repeated pass reuses the route geometry only. **Time-dependent context does not get copied.** SS4, SS5 and SS6 retain their own scheduled starts, so weather requests and safety-train timelines are recomputed for the afternoon pass.
 
 ## Spectator and access integrity
 
@@ -90,7 +97,7 @@ The simulation remains useful, but secondary to the stage brief:
 - Entry-list order is **not** treated as the official SS1 running order. The current official Notice Board exposes the entry list but no SS1 start list yet.
 - An official start list, event-specific instructions or Live TV intervals override the planning model.
 - Motion benchmark: 13:46.4 from the local Rally2 PE1 winner on Turquía. It is used only to validate movement, not as a WRC Rally1 pace forecast.
-- SS2 and SS3 currently show `SIMULACIÓN PENDIENTE`; route, weather and access context do not depend on having a movement model.
+- SS2–SS6 currently show `SIMULACIÓN PENDIENTE`; route, weather and access context do not depend on having a movement model.
 
 The reconstructed routes are **not official GPS traces**, the simulated start grid is **not an official running order**, and the SS1 motion benchmark is **not a WRC Rally1 forecast**.
 
@@ -119,6 +126,7 @@ Additional integrity rules:
 - Reconstructed geometry stays explicitly different from verified geometry.
 - Reconstruction method and confidence can differ by stage even when the shared state is `reconstructed`.
 - Dense third-party geometry does not become official GPS merely because it contains many coordinates.
+- Reusing geometry for a repeated pass does not reuse time-dependent weather or operational timing.
 - Modelled environmental context stays explicitly different from observations.
 - The precision of derived environmental sampling cannot exceed the practical quality of the reference geometry.
 - Schedule distance and technical distance remain separate when current public sources disagree.
@@ -154,11 +162,13 @@ npm run build
 
 Schedule and technical availability are intentionally separate:
 
-`schedule snapshot + technical stage datasets → withTechnicalAvailability → rally overview`
+`schedule snapshot + technical stage datasets → materializeTechnicalStages → withTechnicalAvailability → rally overview`
 
-The initial technical stage data is split so new groups of stages can be added without rewriting the original Turquía snapshot:
+The technical route data stays normalized instead of copying hundreds of coordinates for repeated passes:
 
-`stages.json (SS1) + stages-friday.json (SS2/SS3) → technical stage catalog`
+`stages.json (SS1) + stages-friday.json (SS2/SS3) + stage-route-reuse.json (SS4→SS1, SS5→SS2, SS6→SS3) → technical stage catalog`
+
+The reuse mapping copies route geometry/method while stage identity, sequence and planned start come from the independent schedule snapshot. That makes the afternoon weather and safety timeline time-specific without duplicating the route itself.
 
 Vehicle movement stays deliberately small and replaceable:
 
@@ -176,13 +186,13 @@ Spectator/access context is an independent sourced layer:
 
 `StageSpectatorInfo → stage-specific coordinates only → buildStageGeoJson → clickable MapLibre spectator features`
 
-That separation lets another technical stage become shareable by supplying geometry and provenance, without duplicating the stage-page implementation or modifying the source schedule snapshot.
+That separation lets another technical stage become shareable by supplying geometry and provenance, or by explicitly reusing a sourced repeated route, without duplicating the stage-page implementation or modifying the source schedule snapshot.
 
 ## Sources
 
 Source URLs and access dates are stored inside the static rally dataset where applicable. Current route and context sources include:
 
-- WRC Rally Chile Bio Bío 2026 route announcement for current stage relationships and technical-distance context.
+- WRC Rally Chile Bio Bío 2026 route announcement for current stage relationships, technical-distance context and the statement that each Friday stage is run twice.
 - Rally Chile Bio Bío official 2026 Notice Board / Sportity for currently published entry/start-list documents.
 - Rally Chile Bio Bío spectator guidance for event-level access information.
 - BioBioChile WRC Chile 2026 access guidance for the published 20:00 closure rule, capacity caveat, exit rule and safety-train timing.
