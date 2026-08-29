@@ -91,6 +91,137 @@
   font-size: 0.92rem;
 }
 
+.pass-temperature-profile-block {
+  margin-top: 12px;
+  padding: 12px 12px 9px;
+  border: 1px solid #26343b;
+  background: #080d10;
+}
+
+.pass-profile-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #202a30;
+}
+
+.pass-profile-heading span {
+  color: #6b8791;
+  font-size: 0.55rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+}
+
+.pass-profile-heading strong {
+  color: #bcebf3;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+
+.temperature-profile {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.temperature-profile-scale {
+  position: relative;
+  min-height: 150px;
+  color: #59666d;
+  font-size: 0.52rem;
+}
+
+.temperature-profile-scale span {
+  position: absolute;
+  right: 0;
+}
+
+.temperature-profile-scale span:first-child { top: 0; }
+.temperature-profile-scale span:nth-child(2) { top: 50%; transform: translateY(-50%); }
+.temperature-profile-scale span:last-child { bottom: 24px; }
+
+.temperature-profile-plot {
+  position: relative;
+  min-height: 150px;
+  margin: 0 14px;
+}
+
+.temperature-profile-zero {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  border-top: 1px solid #39434a;
+}
+
+.temperature-profile-node {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+.temperature-profile-stem {
+  position: absolute;
+  left: 50%;
+  width: 3px;
+  min-height: 3px;
+  transform: translateX(-50%);
+}
+
+.temperature-profile-stem--positive { background: var(--cyan); }
+.temperature-profile-stem--negative { background: var(--amber); }
+
+.temperature-profile-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border: 1px solid #d8dde0;
+  border-radius: 50%;
+  background: #091116;
+  transform: translate(-50%, -50%);
+}
+
+.temperature-profile-node--missing .temperature-profile-dot {
+  border-style: dashed;
+  opacity: 0.45;
+}
+
+.temperature-profile-value,
+.temperature-profile-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.temperature-profile-value {
+  top: 4px;
+  color: #aeb9be;
+  font-size: 0.53rem;
+  font-weight: 750;
+}
+
+.temperature-profile-label {
+  bottom: 0;
+  color: #69777e;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.temperature-profile-empty {
+  margin: 12px 0 4px;
+  color: #69777e;
+  font-size: 0.66rem;
+}
+
 @media (max-width: 760px) {
   .pass-selector {
     grid-template-columns: 1fr;
@@ -104,10 +235,31 @@
   .pass-comparison-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .temperature-profile {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .temperature-profile-value {
+    display: none;
+  }
+
+  .temperature-profile-label {
+    font-size: 0.45rem;
+  }
 }
 
 @media (max-width: 480px) {
   .pass-comparison-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .pass-profile-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .temperature-profile-label {
+    display: none;
   }
 }
