@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
-import type { GeoJSONSource, StyleSpecification } from 'maplibre-gl'
-import type { SimulatedStageRun, StageGeometryStatus, StageLineString } from '../domain/rally'
+import type { GeoJSONSource, MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl'
+import type { SimulatedStageRun, StageGeometryStatus, StageLineString, StageSpectatorInfo } from '../domain/rally'
 import { buildRouteNodes } from '../map/environmentNodes'
 import { presentEnvironmentSnapshot } from '../map/environmentView'
 import { fetchOpenMeteoForecast, type RouteEnvironmentSnapshot } from '../map/openMeteo'
@@ -29,6 +29,7 @@ interface RallyMapProps {
   geometryStatus: StageGeometryStatus
   geometry: StageLineString | null
   run: SimulatedStageRun | null
+  spectator?: StageSpectatorInfo
   scheduledStart: string
   timezone: string
   simulationEnabled?: boolean
@@ -47,10 +48,55 @@ function formatInterval(seconds: number): string {
   return `${minutes}:${String(remaining).padStart(2, '0')}`
 }
 
+function addSpectatorPopup(map: maplibregl.Map, layerId: string) {
+  const onClick = (event: MapLayerMouseEvent) => {
+    const feature = event.features?.[0]
+    if (!feature || feature.geometry.type !== 'Point') return
+
+    const coordinates = feature.geometry.coordinates as [number, number]
+    const container = document.createElement('div')
+    container.className = 'map-popup-content'
+
+    const title = document.createElement('strong')
+    title.textContent = typeof feature.properties?.label === 'string' ? feature.properties.label : 'Punto oficial'
+    container.append(title)
+
+    if (typeof feature.properties?.description === 'string' && feature.properties.description.length > 0) {
+      const description = document.createElement('p')
+      description.textContent = feature.properties.description
+      container.append(description)
+    }
+
+    new maplibregl.Popup({ closeButton: true, offset: 12 })
+      .setLngLat(coordinates)
+      .setDOMContent(container)
+      .addTo(map)
+  }
+
+  const onEnter = () => {
+    map.getCanvas().style.cursor = 'pointer'
+  }
+
+  const onLeave = () => {
+    map.getCanvas().style.cursor = ''
+  }
+
+  map.on('click', layerId, onClick)
+  map.on('mouseenter', layerId, onEnter)
+  map.on('mouseleave', layerId, onLeave)
+
+  return () => {
+    map.off('click', layerId, onClick)
+    map.off('mouseenter', layerId, onEnter)
+    map.off('mouseleave', layerId, onLeave)
+  }
+}
+
 export function RallyMap({
   geometryStatus,
   geometry,
   run,
+  spectator,
   scheduledStart,
   timezone,
   simulationEnabled = true,
@@ -63,6 +109,10 @@ export function RallyMap({
     () => (run ? buildPlannedStartGrid(run.carCount, run.startIntervalSeconds) : []),
     [run],
   )
+  const spectatorContext = useMemo(() => ({
+    spectatorZones: spectator?.spectatorZones ?? [],
+    parking: spectator?.parking ?? [],
+  }), [spectator?.parking, spectator?.spectatorZones])
   const [environment, setEnvironment] = useState<RouteEnvironmentSnapshot[]>([])
   const [environmentStatus, setEnvironmentStatus] = useState<EnvironmentStatus>('idle')
 
@@ -116,6 +166,7 @@ export function RallyMap({
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right')
 
     let animationFrameId: number | null = null
+    const removePopupHandlers: Array<() => void> = []
 
     map.on('load', () => {
       if (!geometry) return
@@ -129,7 +180,7 @@ export function RallyMap({
 
       map.addSource('stage-context', {
         type: 'geojson',
-        data: buildStageGeoJson(geometry, initialFleet, geometryStatus, nodes),
+        data: buildStageGeoJson(geometry, initialFleet, geometryStatus, nodes, spectatorContext),
       })
 
       map.addLayer({
@@ -183,6 +234,35 @@ export function RallyMap({
         },
       })
 
+      map.addLayer({
+        id: 'spectator-zones',
+        type: 'circle',
+        source: 'stage-context',
+        filter: ['==', ['get', 'kind'], 'spectator-zone'],
+        paint: {
+          'circle-radius': 8,
+          'circle-color': '#69d39d',
+          'circle-stroke-color': '#071017',
+          'circle-stroke-width': 3,
+        },
+      })
+
+      map.addLayer({
+        id: 'spectator-parking',
+        type: 'circle',
+        source: 'stage-context',
+        filter: ['==', ['get', 'kind'], 'spectator-parking'],
+        paint: {
+          'circle-radius': 8,
+          'circle-color': '#e3ad4b',
+          'circle-stroke-color': '#071017',
+          'circle-stroke-width': 3,
+        },
+      })
+
+      removePopupHandlers.push(addSpectatorPopup(map, 'spectator-zones'))
+      removePopupHandlers.push(addSpectatorPopup(map, 'spectator-parking'))
+
       if (simulationActive && run) {
         map.addLayer({
           id: 'simulated-vehicle',
@@ -221,6 +301,10 @@ export function RallyMap({
         new maplibregl.LngLatBounds(geometry.coordinates[0], geometry.coordinates[0]),
       )
 
+      for (const point of [...spectatorContext.spectatorZones, ...spectatorContext.parking]) {
+        if (point.coordinate) bounds.extend(point.coordinate)
+      }
+
       map.fitBounds(bounds, { padding: 48, duration: 0 })
 
       if (!simulationActive || !run) return
@@ -236,7 +320,7 @@ export function RallyMap({
         const snapshots = fleetSnapshot(geometry, startGrid, stageStartMs, expectedDurationMs, virtualNowMs)
         const source = map.getSource('stage-context') as GeoJSONSource | undefined
 
-        source?.setData(buildStageGeoJson(geometry, snapshots, geometryStatus, nodes))
+        source?.setData(buildStageGeoJson(geometry, snapshots, geometryStatus, nodes, spectatorContext))
 
         if (simulationRef.current) {
           const runningCount = snapshots.filter((snapshot) => snapshot.status === 'running').length
@@ -252,9 +336,10 @@ export function RallyMap({
 
     return () => {
       if (animationFrameId !== null) cancelAnimationFrame(animationFrameId)
+      removePopupHandlers.forEach((remove) => remove())
       map.remove()
     }
-  }, [geometry, geometryStatus, nodes, run, scheduledStart, simulationEnabled, startGrid])
+  }, [geometry, geometryStatus, nodes, run, scheduledStart, simulationEnabled, spectatorContext, startGrid])
 
   return (
     <>
@@ -268,6 +353,9 @@ export function RallyMap({
               {run.carCount} SIM {run.priority} · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×
             </span>
           ) : geometry ? <span>TRAMO + CONTEXTO AMBIENTAL</span> : null}
+          {spectatorContext.spectatorZones.length > 0 || spectatorContext.parking.length > 0 ? (
+            <span>{spectatorContext.spectatorZones.length} ZONA(S) · {spectatorContext.parking.length} PARKING</span>
+          ) : null}
         </div>
       </section>
 
