@@ -19,6 +19,7 @@ Current V0:
 - Motion benchmark: 13:46.4 from the local Rally2 PE1 winner on Turquía, visualized at 60× playback speed.
 - Explicit START and FINISH markers plus context nodes every 2.5 km along the reference route.
 - Client-side Open-Meteo context for the planned stage start: temperature, 10 m wind, gusts, precipitation and returned location elevation.
+- The forecast request explicitly enables the 16-day horizon so the pre-event Chile scenario remains inside the documented forecast window.
 - The first map view intentionally contains no place-name labels.
 
 The reconstructed route is **not an official GPS trace**, and the motion benchmark is **not a WRC Rally1 forecast**.
