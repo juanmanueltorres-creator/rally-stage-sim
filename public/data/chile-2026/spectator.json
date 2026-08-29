@@ -1,0 +1,22 @@
+[
+  {
+    "stageId": "chile-2026-ss1-turquia-1",
+    "accessStatus": "pending",
+    "roadClosureText": "El organizador informa a nivel general que el ingreso del público a los tramos se cierra el día anterior a su inicio. El detalle específico de accesos de SS1 todavía está pendiente de publicación oficial.",
+    "spectatorZones": [],
+    "parking": [],
+    "services": [],
+    "safetyNote": "Usá únicamente zonas y accesos publicados por la organización y seguí las indicaciones de seguridad y de las autoridades. Esta app no propone accesos alternativos ni atajos por el tramo competitivo.",
+    "provenance": {
+      "state": "planned",
+      "sources": [
+        {
+          "label": "Rally Chile Bio Bío 2026 — Lo que se viene en septiembre",
+          "url": "https://rallychilebiobio.com/2026/08/25/lo-que-se-viene-en-septiembre/",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "General event-level spectator guidance only. SS1-specific spectator zones, parking, services and access points remain pending official publication."
+    }
+  }
+]
