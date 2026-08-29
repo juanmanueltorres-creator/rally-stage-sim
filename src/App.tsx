@@ -8,7 +8,7 @@ import type {
   StageRouteReuse,
   StageSpectatorInfo,
 } from './domain/rally'
-import { materializeTechnicalStages, withTechnicalAvailability } from './domain/stageCatalog'
+import { findRouteReusePair, materializeTechnicalStages, withTechnicalAvailability } from './domain/stageCatalog'
 import { normalizeSpectatorInfo } from './domain/spectator'
 import { parseAppRoute, type AppRoute } from './navigation/stageRoute'
 import { hasSeenIntro, markIntroSeen } from './presentation/introPreference'
@@ -20,6 +20,7 @@ interface AppData {
   event: RallyEvent
   technicalStages: RallyStage[]
   schedule: RallyScheduleStage[]
+  routeReuse: StageRouteReuse[]
   runs: SimulatedStageRun[]
   entries: RallyEntry[]
   spectator: StageSpectatorInfo[]
@@ -98,6 +99,7 @@ export function App() {
           event: (await eventResponse.json()) as RallyEvent,
           technicalStages,
           schedule: withTechnicalAvailability(scheduleSnapshot, technicalStages),
+          routeReuse,
           runs: (await simulationResponse.json()) as SimulatedStageRun[],
           entries: (await entriesResponse.json()) as RallyEntry[],
           spectator: (await spectatorResponse.json()) as StageSpectatorInfo[],
@@ -128,7 +130,7 @@ export function App() {
     return <main className="app-shell"><p className="loading">Cargando Rally Chile 2026…</p></main>
   }
 
-  const { event, technicalStages, schedule, runs, entries, spectator } = data
+  const { event, technicalStages, schedule, routeReuse, runs, entries, spectator } = data
   let content
 
   if (route.kind === 'stage' && route.eventId === event.id) {
@@ -137,6 +139,13 @@ export function App() {
     if (selected) {
       const technicalStage = technicalStages.find((stage) => stage.code === selected.code) ?? null
       const run = technicalStage ? runs.find((candidate) => candidate.stageId === technicalStage.id) ?? null : null
+      const pair = findRouteReusePair(selected.code, routeReuse)
+      const passPair = pair
+        ? {
+            firstPass: schedule.find((stage) => stage.code === pair.firstPassCode) ?? null,
+            secondPass: schedule.find((stage) => stage.code === pair.secondPassCode) ?? null,
+          }
+        : null
       const spectatorStageId = technicalStage?.id ?? `${event.id}-${selected.code.toLowerCase()}`
       const specificSpectatorInfo = spectator.find((candidate) => candidate.stageId === spectatorStageId)
       const generalSpectatorInfo = spectator.find((candidate) => {
@@ -154,6 +163,10 @@ export function App() {
           event={event}
           stage={selected}
           technicalStage={technicalStage}
+          passPair={passPair?.firstPass && passPair.secondPass ? {
+            firstPass: passPair.firstPass,
+            secondPass: passPair.secondPass,
+          } : null}
           run={run}
           entries={entries}
           spectator={spectatorInfo}
