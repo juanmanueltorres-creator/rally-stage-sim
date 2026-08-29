@@ -14,22 +14,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Capture Rally-Maps stage geometry payload
+      - name: Capture official ANARE Turquía map
         shell: bash
         run: |
           set -e
-          curl --max-time 15 -L -sS -A "Mozilla/5.0" \
-            "https://www.rally-maps.com/rm2/rest/geodata/related/stage/288420/mapobjects" \
-            -o /tmp/turquia-mapobjects.json
-          echo "mapobjects bytes=$(wc -c </tmp/turquia-mapobjects.json)"
-          head -c 240 /tmp/turquia-mapobjects.json || true
-          echo
+          curl --max-time 20 -L -sS \
+            "https://anarerally.cl/wp-content/uploads/2026/06/Turquia.pdf" \
+            -o /tmp/Turquia.pdf
+          echo "ANARE Turquía PDF bytes=$(wc -c </tmp/Turquia.pdf)"
+          file /tmp/Turquia.pdf
 
-      - name: Upload Turquía geometry payload
+      - name: Upload official map probe
         uses: actions/upload-artifact@v4
         with:
-          name: turquia-mapobjects
-          path: /tmp/turquia-mapobjects.json
+          name: anare-turquia-map
+          path: /tmp/Turquia.pdf
           retention-days: 1
 
       - name: Setup Node
