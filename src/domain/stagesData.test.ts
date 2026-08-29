@@ -15,6 +15,27 @@ async function loadStages(): Promise<RallyStage[]> {
   ]
 }
 
+function geometryLengthKm(coordinates: [number, number][]): number {
+  const earthRadiusKm = 6371.0088
+  let total = 0
+
+  for (let index = 1; index < coordinates.length; index += 1) {
+    const [lon1, lat1] = coordinates[index - 1]
+    const [lon2, lat2] = coordinates[index]
+    const lat1Rad = lat1 * Math.PI / 180
+    const lat2Rad = lat2 * Math.PI / 180
+    const deltaLat = (lat2 - lat1) * Math.PI / 180
+    const deltaLon = (lon2 - lon1) * Math.PI / 180
+    const haversine =
+      Math.sin(deltaLat / 2) ** 2 +
+      Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(deltaLon / 2) ** 2
+
+    total += 2 * earthRadiusKm * Math.asin(Math.sqrt(haversine))
+  }
+
+  return total
+}
+
 test('technical stage snapshot contains reconstructed geometry for SS1 through SS3', async () => {
   const stages = await loadStages()
 
@@ -49,5 +70,21 @@ test('Nuevo Rere and Hualqui use dense current-route reference geometry rather t
     assert.ok(stage.provenance.sources.some((source) => source.url.includes('rally-maps.com')), `${stage.code} should cite the current interactive route reference`)
     assert.match(stage.provenance.note ?? '', /reference reconstruction/i)
     assert.doesNotMatch(stage.provenance.note ?? '', /coarse corridor reconstruction/i)
+  }
+})
+
+test('dense Friday reference geometries stay within one percent of WRC technical distance', async () => {
+  const stages = await loadStages()
+  const friday = stages.filter((stage) => stage.code === 'SS2' || stage.code === 'SS3')
+
+  for (const stage of friday) {
+    assert.ok(stage.geometry, `${stage.code} should have geometry`)
+    const geometryKm = geometryLengthKm(stage.geometry.coordinates as [number, number][])
+    const relativeError = Math.abs(geometryKm - stage.distanceKm) / stage.distanceKm
+
+    assert.ok(
+      relativeError < 0.01,
+      `${stage.code} geometry ${geometryKm.toFixed(3)} km should stay within 1% of ${stage.distanceKm.toFixed(2)} km`,
+    )
   }
 })
