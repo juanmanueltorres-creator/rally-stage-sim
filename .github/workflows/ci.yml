@@ -14,21 +14,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Capture official ANARE Turquía map
+      - name: Capture OpenStreetMap roads for Turquía bbox
         shell: bash
         run: |
           set -e
-          curl --max-time 20 -L -sS \
-            "https://anarerally.cl/wp-content/uploads/2026/06/Turquia.pdf" \
-            -o /tmp/Turquia.pdf
-          echo "ANARE Turquía PDF bytes=$(wc -c </tmp/Turquia.pdf)"
-          file /tmp/Turquia.pdf
+          cat > /tmp/query.overpass <<'EOF'
+          [out:json][timeout:25];
+          way["highway"](-37.257672,-72.737485,-37.167304,-72.653542);
+          out geom;
+          EOF
+          curl --max-time 45 -L -sS --data-urlencode "data@/tmp/query.overpass" \
+            "https://overpass-api.de/api/interpreter" \
+            -o /tmp/turquia-osm-roads.json
+          echo "OSM roads bytes=$(wc -c </tmp/turquia-osm-roads.json)"
+          python3 - <<'PY'
+          import json
+          with open('/tmp/turquia-osm-roads.json', encoding='utf-8') as f:
+              data=json.load(f)
+          ways=[e for e in data.get('elements',[]) if e.get('type')=='way']
+          print(f'OSM highway ways={len(ways)}')
+          PY
 
-      - name: Upload official map probe
+      - name: Upload OSM roads probe
         uses: actions/upload-artifact@v4
         with:
-          name: anare-turquia-map
-          path: /tmp/Turquia.pdf
+          name: turquia-osm-roads
+          path: /tmp/turquia-osm-roads.json
           retention-days: 1
 
       - name: Setup Node
