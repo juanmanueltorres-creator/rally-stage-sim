@@ -1,0 +1,182 @@
+[
+  {
+    "carNo": 33,
+    "driver": "Elfyn Evans",
+    "coDriver": "Scott Martin",
+    "entrant": "Toyota Gazoo Racing WRT",
+    "car": "Toyota GR Yaris Rally1",
+    "class": "RC1",
+    "priority": "P1",
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "Rally Chile BioBío 2026 — official entry list",
+        "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Official entry-list row. Entry-list order does not imply SS1 running order."
+    }
+  },
+  {
+    "carNo": 5,
+    "driver": "Sami Pajari",
+    "coDriver": "Marko Salminen",
+    "entrant": "Toyota Gazoo Racing WRT2",
+    "car": "Toyota GR Yaris Rally1",
+    "class": "RC1",
+    "priority": "P1",
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "Rally Chile BioBío 2026 — official entry list",
+        "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Official entry-list row. Entry-list order does not imply SS1 running order."
+    }
+  },
+  {
+    "carNo": 18,
+    "driver": "Takamoto Katsuta",
+    "coDriver": "Aaron Johnston",
+    "entrant": "Toyota Gazoo Racing WRT",
+    "car": "Toyota GR Yaris Rally1",
+    "class": "RC1",
+    "priority": "P1",
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "Rally Chile BioBío 2026 — official entry list",
+        "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Official entry-list row. Entry-list order does not imply SS1 running order."
+    }
+  },
+  {
+    "carNo": 99,
+    "driver": "Oliver Solberg",
+    "coDriver": "Elliott Edmondson",
+    "entrant": "Toyota Gazoo Racing WRT",
+    "car": "Toyota GR Yaris Rally1",
+    "class": "RC1",
+    "priority": "P1",
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "Rally Chile BioBío 2026 — official entry list",
+        "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Official entry-list row. Entry-list order does not imply SS1 running order."
+    }
+  },
+  {
+    "carNo": 1,
+    "driver": "Sébastien Ogier",
+    "coDriver": "Vincent Landais",
+    "entrant": "Toyota Gazoo Racing WRT",
+    "car": "Toyota GR Yaris Rally1",
+    "class": "RC1",
+    "priority": "P1",
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "Rally Chile BioBío 2026 — official entry list",
+        "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Official entry-list row. Entry-list order does not imply SS1 running order."
+    }
+  },
+  {
+    "carNo": 16,
+    "driver": "Adrien Fourmaux",
+    "coDriver": "Alexandre Coria",
+    "entrant": "Hyundai Shell Mobis World Rally Team",
+    "car": "Hyundai i20 N Rally1",
+    "class": "RC1",
+    "priority": "P1",
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "Rally Chile BioBío 2026 — official entry list",
+        "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Official entry-list row. Entry-list order does not imply SS1 running order."
+    }
+  },
+  {
+    "carNo": 11,
+    "driver": "Thierry Neuville",
+    "coDriver": "Martijn Wydaeghe",
+    "entrant": "Hyundai Shell Mobis World Rally Team",
+    "car": "Hyundai i20 N Rally1",
+    "class": "RC1",
+    "priority": "P1",
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "Rally Chile BioBío 2026 — official entry list",
+        "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Official entry-list row. Entry-list order does not imply SS1 running order."
+    }
+  },
+  {
+    "carNo": 4,
+    "driver": "Esapekka Lappi",
+    "coDriver": "Enni Mälkönen",
+    "entrant": "Hyundai Shell Mobis World Rally Team",
+    "car": "Hyundai i20 N Rally1",
+    "class": "RC1",
+    "priority": "P1",
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "Rally Chile BioBío 2026 — official entry list",
+        "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Official entry-list row. Entry-list order does not imply SS1 running order."
+    }
+  },
+  {
+    "carNo": 55,
+    "driver": "Joshua McErlean",
+    "coDriver": "Eoin Treacy",
+    "entrant": "M-Sport Ford World Rally Team",
+    "car": "Ford Puma Rally1",
+    "class": "RC1",
+    "priority": "P1",
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "Rally Chile BioBío 2026 — official entry list",
+        "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Official entry-list row. Entry-list order does not imply SS1 running order."
+    }
+  },
+  {
+    "carNo": 95,
+    "driver": "Jon Armstrong",
+    "coDriver": "Shane Byrne",
+    "entrant": "M-Sport Ford World Rally Team",
+    "car": "Ford Puma Rally1",
+    "class": "RC1",
+    "priority": "P1",
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "Rally Chile BioBío 2026 — official entry list",
+        "url": "https://rallychilebiobio.com/wp-content/uploads/2026/08/DOC-20260819-WA0057.pdf",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Official entry-list row. Entry-list order does not imply SS1 running order."
+    }
+  }
+]
