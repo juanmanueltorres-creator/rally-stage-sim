@@ -65,3 +65,28 @@ export interface SimulatedStageRun {
   playbackSpeed: number
   provenance: DataProvenance
 }
+
+export interface SpectatorPoint {
+  id: string
+  label: string
+  coordinate?: [number, number]
+  description?: string
+}
+
+export interface SpectatorService {
+  id: string
+  label: string
+  kind: 'parking' | 'toilets' | 'food' | 'shuttle' | 'other'
+  description?: string
+}
+
+export interface StageSpectatorInfo {
+  stageId: string
+  accessStatus: 'known' | 'pending'
+  roadClosureText?: string
+  spectatorZones: SpectatorPoint[]
+  parking: SpectatorPoint[]
+  services: SpectatorService[]
+  safetyNote?: string
+  provenance: DataProvenance
+}
