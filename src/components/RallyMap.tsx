@@ -6,7 +6,8 @@ import { buildRouteNodes } from '../map/environmentNodes'
 import { presentEnvironmentSnapshot } from '../map/environmentView'
 import { fetchOpenMeteoForecast, type RouteEnvironmentSnapshot } from '../map/openMeteo'
 import { buildStageGeoJson } from '../map/stageGeoJson'
-import { vehicleSnapshot } from '../simulation/vehicle'
+import { fleetSnapshot } from '../simulation/fleet'
+import { buildPlannedStartGrid } from '../simulation/startGrid'
 
 const MAP_STYLE: StyleSpecification = {
   version: 8,
@@ -38,6 +39,12 @@ function geometryMessage(status: StageGeometryStatus, hasGeometry: boolean): str
   return 'Reference reconstruction — organizer map + OpenStreetMap, not an official GPS trace'
 }
 
+function formatInterval(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  const remaining = seconds - minutes * 60
+  return `${minutes}:${String(remaining).padStart(2, '0')}`
+}
+
 export function RallyMap({
   geometryStatus,
   geometry,
@@ -48,6 +55,10 @@ export function RallyMap({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const simulationRef = useRef<HTMLSpanElement | null>(null)
   const nodes = useMemo(() => (geometry ? buildRouteNodes(geometry, 2.5) : []), [geometry])
+  const startGrid = useMemo(
+    () => (run ? buildPlannedStartGrid(run.carCount, run.startIntervalSeconds) : []),
+    [run],
+  )
   const [environment, setEnvironment] = useState<RouteEnvironmentSnapshot[]>([])
   const [environmentStatus, setEnvironmentStatus] = useState<EnvironmentStatus>('idle')
 
@@ -99,9 +110,14 @@ export function RallyMap({
     let animationFrameId: number | null = null
 
     map.on('load', () => {
-      if (!geometry || !run) return
+      if (!geometry || !run || startGrid.length === 0) return
 
-      const sourceData = buildStageGeoJson(geometry, geometry.coordinates[0], geometryStatus, nodes)
+      const stageStartMs = Date.parse(scheduledStart)
+      const expectedDurationMs = run.expectedDurationSeconds * 1_000
+      const lastStartOffsetMs = startGrid[startGrid.length - 1].startOffsetSeconds * 1_000
+      const scenarioDurationMs = lastStartOffsetMs + expectedDurationMs
+      const initialFleet = fleetSnapshot(geometry, startGrid, stageStartMs, expectedDurationMs, stageStartMs)
+      const sourceData = buildStageGeoJson(geometry, initialFleet, geometryStatus, nodes)
 
       map.addSource('stage-simulation', {
         type: 'geojson',
@@ -165,8 +181,26 @@ export function RallyMap({
         source: 'stage-simulation',
         filter: ['==', ['get', 'kind'], 'simulated-vehicle'],
         paint: {
-          'circle-radius': 7,
-          'circle-color': '#ff5d5d',
+          'circle-radius': [
+            'match',
+            ['get', 'status'],
+            'waiting', 4,
+            'finished', 5,
+            7,
+          ],
+          'circle-color': [
+            'match',
+            ['get', 'status'],
+            'waiting', '#626a73',
+            'finished', '#f5f5f2',
+            '#ff5d5d',
+          ],
+          'circle-opacity': [
+            'match',
+            ['get', 'status'],
+            'waiting', 0.45,
+            0.95,
+          ],
           'circle-stroke-color': '#ffffff',
           'circle-stroke-width': 2,
         },
@@ -180,18 +214,20 @@ export function RallyMap({
       map.fitBounds(bounds, { padding: 48, duration: 0 })
 
       const realStartMs = performance.now()
-      const expectedDurationMs = run.expectedDurationSeconds * 1_000
 
       const animate = (realNowMs: number) => {
         const realElapsedMs = realNowMs - realStartMs
-        const virtualElapsedMs = (realElapsedMs * run.playbackSpeed) % expectedDurationMs
-        const snapshot = vehicleSnapshot(geometry, 0, expectedDurationMs, virtualElapsedMs)
+        const virtualElapsedMs = (realElapsedMs * run.playbackSpeed) % scenarioDurationMs
+        const virtualNowMs = stageStartMs + virtualElapsedMs
+        const snapshots = fleetSnapshot(geometry, startGrid, stageStartMs, expectedDurationMs, virtualNowMs)
         const source = map.getSource('stage-simulation') as GeoJSONSource | undefined
 
-        source?.setData(buildStageGeoJson(geometry, snapshot.coordinate, geometryStatus, nodes))
+        source?.setData(buildStageGeoJson(geometry, snapshots, geometryStatus, nodes))
 
         if (simulationRef.current) {
-          simulationRef.current.textContent = `SIM CAR · ${run.playbackSpeed}× · ${(snapshot.progress * 100).toFixed(1)}%`
+          const runningCount = snapshots.filter((snapshot) => snapshot.status === 'running').length
+          const finishedCount = snapshots.filter((snapshot) => snapshot.status === 'finished').length
+          simulationRef.current.textContent = `${run.carCount} SIM ${run.priority} · ${runningCount} ON STAGE · ${finishedCount} FIN · ${formatInterval(run.startIntervalSeconds)} slots · ${run.playbackSpeed}×`
         }
 
         animationFrameId = requestAnimationFrame(animate)
@@ -204,7 +240,7 @@ export function RallyMap({
       if (animationFrameId !== null) cancelAnimationFrame(animationFrameId)
       map.remove()
     }
-  }, [geometry, geometryStatus, nodes, run])
+  }, [geometry, geometryStatus, nodes, run, scheduledStart, startGrid])
 
   return (
     <>
@@ -213,7 +249,11 @@ export function RallyMap({
         <div className="map-status" role="status">
           <span className="status-dot" aria-hidden="true" />
           <span>{geometryMessage(geometryStatus, Boolean(geometry))}</span>
-          {geometry && run ? <span ref={simulationRef}>SIM CAR · {run.playbackSpeed}× · 0.0%</span> : null}
+          {geometry && run ? (
+            <span ref={simulationRef}>
+              {run.carCount} SIM {run.priority} · 1 ON STAGE · 0 FIN · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×
+            </span>
+          ) : null}
         </div>
       </section>
 
