@@ -1,0 +1,343 @@
+[
+  {
+    "eventId": "chile-2026",
+    "sequence": 1,
+    "code": "SS1",
+    "slug": "ss1-turquia",
+    "name": "Turquía 1",
+    "date": "2026-09-11",
+    "scheduledStart": "2026-09-11T08:53:00-03:00",
+    "distanceKm": 22.94,
+    "interactive": true,
+    "provenance": {
+      "state": "planned",
+      "sources": [
+        {
+          "label": "BioBioChile — cronograma WRC Chile 2026",
+          "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+          "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "WRC — Rally Chile Bio Bío reveals revamped route for 2026",
+          "url": "https://www.wrc.com/en/news/rally-chile-bio-bio-reveals-revamped-route-for-2026",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "Schedule presentation snapshot. SS1 technical geometry remains separately sourced and explicitly reconstructed, not an official GPS trace. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 2,
+    "code": "SS2",
+    "slug": "ss2-nuevo-rere",
+    "name": "Nuevo Rere 1",
+    "date": "2026-09-11",
+    "scheduledStart": "2026-09-11T09:48:00-03:00",
+    "distanceKm": 10.92,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [
+        {
+          "label": "BioBioChile — cronograma WRC Chile 2026",
+          "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+          "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "WRC — Rally Chile Bio Bío reveals revamped route for 2026",
+          "url": "https://www.wrc.com/en/news/rally-chile-bio-bio-reveals-revamped-route-for-2026",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "The published schedule snapshot lists 10.92 km, while WRC's 21 Aug route article lists 10.76 km. The app preserves the schedule value and exposes the source discrepancy instead of silently reconciling it."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 3,
+    "code": "SS3",
+    "slug": "ss3-hualqui",
+    "name": "Hualqui 1",
+    "date": "2026-09-11",
+    "scheduledStart": "2026-09-11T10:36:00-03:00",
+    "distanceKm": 16.79,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [
+        {
+          "label": "BioBioChile — cronograma WRC Chile 2026",
+          "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+          "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "WRC — Rally Chile Bio Bío reveals revamped route for 2026",
+          "url": "https://www.wrc.com/en/news/rally-chile-bio-bio-reveals-revamped-route-for-2026",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "The published schedule snapshot lists 16.79 km, while WRC's 21 Aug route article lists 16.69 km. The app preserves the schedule value and exposes the source discrepancy instead of silently reconciling it."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 4,
+    "code": "SS4",
+    "slug": "ss4-turquia",
+    "name": "Turquía 2",
+    "date": "2026-09-11",
+    "scheduledStart": "2026-09-11T15:09:00-03:00",
+    "distanceKm": 22.94,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 5,
+    "code": "SS5",
+    "slug": "ss5-nuevo-rere",
+    "name": "Nuevo Rere 2",
+    "date": "2026-09-11",
+    "scheduledStart": "2026-09-11T16:04:00-03:00",
+    "distanceKm": 10.92,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Same public distance discrepancy as SS2 remains unresolved; organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 6,
+    "code": "SS6",
+    "slug": "ss6-hualqui",
+    "name": "Hualqui 2",
+    "date": "2026-09-11",
+    "scheduledStart": "2026-09-11T16:52:00-03:00",
+    "distanceKm": 16.79,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Same public distance discrepancy as SS3 remains unresolved; organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 7,
+    "code": "SS7",
+    "slug": "ss7-pelun",
+    "name": "Pelún 1",
+    "date": "2026-09-12",
+    "scheduledStart": "2026-09-12T09:08:00-03:00",
+    "distanceKm": 15.65,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 8,
+    "code": "SS8",
+    "slug": "ss8-lota",
+    "name": "Lota 1",
+    "date": "2026-09-12",
+    "scheduledStart": "2026-09-12T10:01:00-03:00",
+    "distanceKm": 25.64,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 9,
+    "code": "SS9",
+    "slug": "ss9-maria-las-cruces",
+    "name": "María las Cruces 1",
+    "date": "2026-09-12",
+    "scheduledStart": "2026-09-12T11:05:00-03:00",
+    "distanceKm": 28.31,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 10,
+    "code": "SS10",
+    "slug": "ss10-pelun",
+    "name": "Pelún 2",
+    "date": "2026-09-12",
+    "scheduledStart": "2026-09-12T15:08:00-03:00",
+    "distanceKm": 15.65,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 11,
+    "code": "SS11",
+    "slug": "ss11-lota",
+    "name": "Lota 2",
+    "date": "2026-09-12",
+    "scheduledStart": "2026-09-12T16:01:00-03:00",
+    "distanceKm": 25.64,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 12,
+    "code": "SS12",
+    "slug": "ss12-maria-las-cruces",
+    "name": "María las Cruces 2",
+    "date": "2026-09-12",
+    "scheduledStart": "2026-09-12T17:05:00-03:00",
+    "distanceKm": 28.31,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 13,
+    "code": "SS13",
+    "slug": "ss13-carampangue",
+    "name": "Carampangue 1",
+    "date": "2026-09-13",
+    "scheduledStart": "2026-09-13T09:00:00-03:00",
+    "distanceKm": 26.82,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 14,
+    "code": "SS14",
+    "slug": "ss14-biobio",
+    "name": "BioBio 1",
+    "date": "2026-09-13",
+    "scheduledStart": "2026-09-13T10:05:00-03:00",
+    "distanceKm": 8.78,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 15,
+    "code": "SS15",
+    "slug": "ss15-carampangue",
+    "name": "Carampangue 2",
+    "date": "2026-09-13",
+    "scheduledStart": "2026-09-13T11:13:00-03:00",
+    "distanceKm": 26.82,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  },
+  {
+    "eventId": "chile-2026",
+    "sequence": 16,
+    "code": "SS16",
+    "slug": "ss16-powerstage-biobio",
+    "name": "Powerstage BioBio 2",
+    "date": "2026-09-13",
+    "scheduledStart": "2026-09-13T13:15:00-03:00",
+    "distanceKm": 8.78,
+    "interactive": false,
+    "provenance": {
+      "state": "planned",
+      "sources": [{
+        "label": "BioBioChile — cronograma WRC Chile 2026",
+        "url": "https://www.biobiochile.cl/especial/wrc2026/noticias/2026/08/13/wrc-chile-2026-revisa-el-cronograma-oficial-con-tramos-y-largada-confirmada-para-el-mundial-de-rally.shtml",
+        "accessedAt": "2026-08-29"
+      }],
+      "note": "Schedule presentation snapshot. Organizer/FIA updates override this snapshot."
+    }
+  }
+]
