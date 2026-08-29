@@ -93,13 +93,24 @@ export interface SpectatorService {
   description?: string
 }
 
+export interface SafetyTrainStep {
+  id: string
+  label: string
+  offsetMinutes: number
+  description?: string
+}
+
 export interface StageSpectatorInfo {
   stageId: string
   accessStatus: 'known' | 'pending'
   roadClosureText?: string
+  roadClosureAt?: string
+  exitRule?: string
+  capacityNote?: string
   spectatorZones: SpectatorPoint[]
   parking: SpectatorPoint[]
   services: SpectatorService[]
+  safetyTrain?: SafetyTrainStep[]
   safetyNote?: string
   provenance: DataProvenance
 }
