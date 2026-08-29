@@ -17,13 +17,13 @@ const MAP_STYLE: StyleSpecification = {
       id: 'background',
       type: 'background',
       paint: {
-        'background-color': '#090b0f',
+        'background-color': '#071017',
       },
     },
   ],
 }
 
-type EnvironmentStatus = 'idle' | 'loading' | 'ready' | 'unavailable'
+export type EnvironmentStatus = 'idle' | 'loading' | 'ready' | 'unavailable'
 
 interface RallyMapProps {
   geometryStatus: StageGeometryStatus
@@ -31,12 +31,14 @@ interface RallyMapProps {
   run: SimulatedStageRun | null
   scheduledStart: string
   timezone: string
+  simulationEnabled?: boolean
+  onEnvironmentChange?: (snapshots: RouteEnvironmentSnapshot[], status: EnvironmentStatus) => void
 }
 
 function geometryMessage(status: StageGeometryStatus, hasGeometry: boolean): string {
-  if (!hasGeometry) return 'Route geometry pending verification — no synthetic route drawn'
-  if (status === 'verified') return 'Verified stage geometry available'
-  return 'Reference reconstruction — organizer map + OpenStreetMap, not an official GPS trace'
+  if (!hasGeometry) return 'Geometría pendiente de verificación — no se dibuja una ruta sintética'
+  if (status === 'verified') return 'Geometría verificada disponible'
+  return 'Reconstrucción de referencia — mapa del organizador + OpenStreetMap, no GPS oficial'
 }
 
 function formatInterval(seconds: number): string {
@@ -51,6 +53,8 @@ export function RallyMap({
   run,
   scheduledStart,
   timezone,
+  simulationEnabled = true,
+  onEnvironmentChange,
 }: RallyMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const simulationRef = useRef<HTMLSpanElement | null>(null)
@@ -71,28 +75,32 @@ export function RallyMap({
     if (!geometry || nodes.length === 0) {
       setEnvironment([])
       setEnvironmentStatus('idle')
+      onEnvironmentChange?.([], 'idle')
       return
     }
 
     let cancelled = false
     setEnvironmentStatus('loading')
+    onEnvironmentChange?.([], 'loading')
 
     void fetchOpenMeteoForecast(nodes, scheduledStart, timezone)
       .then((snapshots) => {
         if (cancelled) return
         setEnvironment(snapshots)
         setEnvironmentStatus('ready')
+        onEnvironmentChange?.(snapshots, 'ready')
       })
       .catch(() => {
         if (cancelled) return
         setEnvironment([])
         setEnvironmentStatus('unavailable')
+        onEnvironmentChange?.([], 'unavailable')
       })
 
     return () => {
       cancelled = true
     }
-  }, [geometry, nodes, scheduledStart, timezone])
+  }, [geometry, nodes, onEnvironmentChange, scheduledStart, timezone])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -110,41 +118,41 @@ export function RallyMap({
     let animationFrameId: number | null = null
 
     map.on('load', () => {
-      if (!geometry || !run || startGrid.length === 0) return
+      if (!geometry) return
 
+      const simulationActive = Boolean(simulationEnabled && run && startGrid.length > 0)
       const stageStartMs = Date.parse(scheduledStart)
-      const expectedDurationMs = run.expectedDurationSeconds * 1_000
-      const lastStartOffsetMs = startGrid[startGrid.length - 1].startOffsetSeconds * 1_000
-      const scenarioDurationMs = lastStartOffsetMs + expectedDurationMs
-      const initialFleet = fleetSnapshot(geometry, startGrid, stageStartMs, expectedDurationMs, stageStartMs)
-      const sourceData = buildStageGeoJson(geometry, initialFleet, geometryStatus, nodes)
+      const expectedDurationMs = run ? run.expectedDurationSeconds * 1_000 : 0
+      const initialFleet = simulationActive && run
+        ? fleetSnapshot(geometry, startGrid, stageStartMs, expectedDurationMs, stageStartMs)
+        : []
 
-      map.addSource('stage-simulation', {
+      map.addSource('stage-context', {
         type: 'geojson',
-        data: sourceData,
+        data: buildStageGeoJson(geometry, initialFleet, geometryStatus, nodes),
       })
 
       map.addLayer({
         id: 'stage-route',
         type: 'line',
-        source: 'stage-simulation',
+        source: 'stage-context',
         filter: ['==', ['get', 'kind'], 'stage-route'],
         paint: {
-          'line-color': '#ffd54a',
+          'line-color': '#e3ad4b',
           'line-width': 4,
-          'line-opacity': 0.92,
+          'line-opacity': 0.94,
         },
       })
 
       map.addLayer({
         id: 'environment-nodes',
         type: 'circle',
-        source: 'stage-simulation',
+        source: 'stage-context',
         filter: ['==', ['get', 'kind'], 'environment-node'],
         paint: {
-          'circle-radius': 4,
-          'circle-color': '#7bdff2',
-          'circle-stroke-color': '#081014',
+          'circle-radius': 5,
+          'circle-color': '#57d1e6',
+          'circle-stroke-color': '#071017',
           'circle-stroke-width': 2,
         },
       })
@@ -152,12 +160,12 @@ export function RallyMap({
       map.addLayer({
         id: 'stage-start',
         type: 'circle',
-        source: 'stage-simulation',
+        source: 'stage-context',
         filter: ['==', ['get', 'kind'], 'stage-start'],
         paint: {
           'circle-radius': 7,
-          'circle-color': '#6ee7a8',
-          'circle-stroke-color': '#ffffff',
+          'circle-color': '#69d39d',
+          'circle-stroke-color': '#f4efe5',
           'circle-stroke-width': 2,
         },
       })
@@ -165,46 +173,48 @@ export function RallyMap({
       map.addLayer({
         id: 'stage-finish',
         type: 'circle',
-        source: 'stage-simulation',
+        source: 'stage-context',
         filter: ['==', ['get', 'kind'], 'stage-finish'],
         paint: {
           'circle-radius': 7,
-          'circle-color': '#f5f5f2',
-          'circle-stroke-color': '#ff6a4a',
+          'circle-color': '#f4efe5',
+          'circle-stroke-color': '#e66b52',
           'circle-stroke-width': 3,
         },
       })
 
-      map.addLayer({
-        id: 'simulated-vehicle',
-        type: 'circle',
-        source: 'stage-simulation',
-        filter: ['==', ['get', 'kind'], 'simulated-vehicle'],
-        paint: {
-          'circle-radius': [
-            'match',
-            ['get', 'status'],
-            'waiting', 4,
-            'finished', 5,
-            7,
-          ],
-          'circle-color': [
-            'match',
-            ['get', 'status'],
-            'waiting', '#626a73',
-            'finished', '#f5f5f2',
-            '#ff5d5d',
-          ],
-          'circle-opacity': [
-            'match',
-            ['get', 'status'],
-            'waiting', 0.45,
-            0.95,
-          ],
-          'circle-stroke-color': '#ffffff',
-          'circle-stroke-width': 2,
-        },
-      })
+      if (simulationActive && run) {
+        map.addLayer({
+          id: 'simulated-vehicle',
+          type: 'circle',
+          source: 'stage-context',
+          filter: ['==', ['get', 'kind'], 'simulated-vehicle'],
+          paint: {
+            'circle-radius': [
+              'match',
+              ['get', 'status'],
+              'waiting', 4,
+              'finished', 5,
+              7,
+            ],
+            'circle-color': [
+              'match',
+              ['get', 'status'],
+              'waiting', '#66717a',
+              'finished', '#f4efe5',
+              '#ff6258',
+            ],
+            'circle-opacity': [
+              'match',
+              ['get', 'status'],
+              'waiting', 0.45,
+              0.98,
+            ],
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 2,
+          },
+        })
+      }
 
       const bounds = geometry.coordinates.reduce(
         (acc, coordinate) => acc.extend(coordinate),
@@ -213,6 +223,10 @@ export function RallyMap({
 
       map.fitBounds(bounds, { padding: 48, duration: 0 })
 
+      if (!simulationActive || !run) return
+
+      const lastStartOffsetMs = startGrid[startGrid.length - 1].startOffsetSeconds * 1_000
+      const scenarioDurationMs = lastStartOffsetMs + expectedDurationMs
       const realStartMs = performance.now()
 
       const animate = (realNowMs: number) => {
@@ -220,14 +234,14 @@ export function RallyMap({
         const virtualElapsedMs = (realElapsedMs * run.playbackSpeed) % scenarioDurationMs
         const virtualNowMs = stageStartMs + virtualElapsedMs
         const snapshots = fleetSnapshot(geometry, startGrid, stageStartMs, expectedDurationMs, virtualNowMs)
-        const source = map.getSource('stage-simulation') as GeoJSONSource | undefined
+        const source = map.getSource('stage-context') as GeoJSONSource | undefined
 
         source?.setData(buildStageGeoJson(geometry, snapshots, geometryStatus, nodes))
 
         if (simulationRef.current) {
           const runningCount = snapshots.filter((snapshot) => snapshot.status === 'running').length
           const finishedCount = snapshots.filter((snapshot) => snapshot.status === 'finished').length
-          simulationRef.current.textContent = `${run.carCount} SIM ${run.priority} · ${runningCount} ON STAGE · ${finishedCount} FIN · ${formatInterval(run.startIntervalSeconds)} slots · ${run.playbackSpeed}×`
+          simulationRef.current.textContent = `${run.carCount} SIM ${run.priority} · ${runningCount} EN TRAMO · ${finishedCount} FIN · ${formatInterval(run.startIntervalSeconds)} slots · ${run.playbackSpeed}×`
         }
 
         animationFrameId = requestAnimationFrame(animate)
@@ -240,41 +254,41 @@ export function RallyMap({
       if (animationFrameId !== null) cancelAnimationFrame(animationFrameId)
       map.remove()
     }
-  }, [geometry, geometryStatus, nodes, run, scheduledStart, startGrid])
+  }, [geometry, geometryStatus, nodes, run, scheduledStart, simulationEnabled, startGrid])
 
   return (
     <>
-      <section className="map-panel" aria-label="Turquía rally stage simulation">
+      <section className="map-panel" aria-label="Mapa del tramo Turquía">
         <div ref={containerRef} className="map-canvas" />
         <div className="map-status" role="status">
           <span className="status-dot" aria-hidden="true" />
           <span>{geometryMessage(geometryStatus, Boolean(geometry))}</span>
-          {geometry && run ? (
+          {geometry && run && simulationEnabled ? (
             <span ref={simulationRef}>
-              {run.carCount} SIM {run.priority} · 1 ON STAGE · 0 FIN · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×
+              {run.carCount} SIM {run.priority} · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×
             </span>
-          ) : null}
+          ) : geometry ? <span>TRAMO + CONTEXTO AMBIENTAL</span> : null}
         </div>
       </section>
 
-      <section className="environment-panel" aria-label="Modelled environmental route context">
+      <section className="environment-panel" aria-label="Contexto ambiental modelado a lo largo del tramo">
         <div className="environment-header">
           <div>
-            <p className="eyebrow">MODELLED ROUTE CONTEXT · OPEN-METEO</p>
-            <h2>START → 2.5 km nodes → FINISH</h2>
+            <p className="eyebrow">CLIMA A LO LARGO DEL TRAMO · OPEN-METEO</p>
+            <h2>START → nodos cada 2,5 km → FINISH</h2>
           </div>
           <p>
-            Spatial sampling for visualization. Weather values are modelled context, not station observations or 2.5 km meteorological resolution.
+            Muestreo espacial para visualización. Son valores modelados, no observaciones de estación ni una afirmación de resolución meteorológica de 2,5 km.
           </p>
         </div>
 
         {environmentStatus === 'loading' ? (
-          <p className="environment-state">Loading forecast context for the planned stage start…</p>
+          <p className="environment-state">Buscando el pronóstico para la hora prevista del tramo…</p>
         ) : null}
 
         {environmentStatus === 'unavailable' ? (
           <p className="environment-state environment-state--warning">
-            Forecast context is outside the available model horizon or temporarily unavailable. Route nodes remain valid.
+            El pronóstico está fuera del horizonte disponible o temporalmente inaccesible. El recorrido y los nodos siguen siendo válidos.
           </p>
         ) : null}
 
@@ -291,8 +305,8 @@ export function RallyMap({
                 </div>
                 <div className="environment-node-values">
                   <div><span>TEMP</span><strong>{view.temperature}</strong></div>
-                  <div><span>WIND</span><strong>{view.wind}</strong></div>
-                  <div><span>GUST</span><strong>{view.gust}</strong></div>
+                  <div><span>VIENTO</span><strong>{view.wind}</strong></div>
+                  <div><span>RÁFAGA</span><strong>{view.gust}</strong></div>
                   <div><span>ELEV</span><strong>{view.elevation}</strong></div>
                   <div><span>PRECIP</span><strong>{view.precipitation}</strong></div>
                 </div>
@@ -302,7 +316,7 @@ export function RallyMap({
         ) : null}
 
         <p className="environment-source">
-          Source: <a href="https://open-meteo.com/en/docs" target="_blank" rel="noreferrer">Open-Meteo Weather Forecast API</a> · requested in {timezone} for the planned SS1 start.
+          Fuente: <a href="https://open-meteo.com/en/docs" target="_blank" rel="noreferrer">Open-Meteo Weather Forecast API</a> · consulta en {timezone} para la hora prevista de SS1.
         </p>
       </section>
     </>
