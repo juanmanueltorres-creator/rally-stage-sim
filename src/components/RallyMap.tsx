@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import maplibregl, { type StyleSpecification } from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
+import type { StyleSpecification } from 'maplibre-gl'
 import type { StageGeometryStatus } from '../domain/rally'
 
 const MAP_STYLE: StyleSpecification = {
