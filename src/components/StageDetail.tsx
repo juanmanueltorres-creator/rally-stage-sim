@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
   RallyEntry,
   RallyEvent,
@@ -7,17 +7,27 @@ import type {
   SimulatedStageRun,
   StageSpectatorInfo,
 } from '../domain/rally'
+import { buildRouteNodes } from '../map/environmentNodes'
+import { fetchOpenMeteoForecast, type RouteEnvironmentSnapshot } from '../map/openMeteo'
+import { compareRouteWeather } from '../map/weatherComparison'
 import { summarizeRouteWeather, type StageWeatherSummary } from '../map/weatherSummary'
 import { stageShareUrl } from '../navigation/stageRoute'
+import { presentPassComparison } from '../presentation/passComparison'
 import { presentStageDistance } from '../presentation/stageDistance'
 import { describeStageConditions } from '../presentation/stageExperience'
 import { buildPlannedStartGrid } from '../simulation/startGrid'
 import { RallyMap, type EnvironmentStatus } from './RallyMap'
 
+interface StagePassPair {
+  firstPass: RallyScheduleStage
+  secondPass: RallyScheduleStage
+}
+
 interface StageDetailProps {
   event: RallyEvent
   stage: RallyScheduleStage
   technicalStage: RallyStage | null
+  passPair: StagePassPair | null
   run: SimulatedStageRun | null
   entries: RallyEntry[]
   spectator: StageSpectatorInfo
@@ -85,6 +95,7 @@ export function StageDetail({
   event,
   stage,
   technicalStage,
+  passPair,
   run,
   entries,
   spectator,
@@ -92,13 +103,69 @@ export function StageDetail({
 }: StageDetailProps) {
   const [weatherSummary, setWeatherSummary] = useState<StageWeatherSummary>(emptyWeatherSummary)
   const [weatherStatus, setWeatherStatus] = useState<EnvironmentStatus>('idle')
+  const [currentEnvironment, setCurrentEnvironment] = useState<RouteEnvironmentSnapshot[]>([])
+  const [otherEnvironment, setOtherEnvironment] = useState<RouteEnvironmentSnapshot[]>([])
+  const [otherWeatherStatus, setOtherWeatherStatus] = useState<EnvironmentStatus>('idle')
   const [simulationOpen, setSimulationOpen] = useState(false)
   const [shareState, setShareState] = useState<'idle' | 'shared' | 'copied' | 'unavailable'>('idle')
 
-  const handleEnvironmentChange = useCallback((snapshots: Parameters<typeof summarizeRouteWeather>[0], status: EnvironmentStatus) => {
+  const handleEnvironmentChange = useCallback((snapshots: RouteEnvironmentSnapshot[], status: EnvironmentStatus) => {
     setWeatherStatus(status)
+    setCurrentEnvironment(snapshots)
     setWeatherSummary(summarizeRouteWeather(snapshots))
   }, [])
+
+  const otherPass = useMemo(() => {
+    if (!passPair) return null
+    if (stage.code === passPair.firstPass.code) return passPair.secondPass
+    if (stage.code === passPair.secondPass.code) return passPair.firstPass
+    return null
+  }, [passPair, stage.code])
+
+  useEffect(() => {
+    if (!otherPass || !technicalStage?.geometry) {
+      setOtherEnvironment([])
+      setOtherWeatherStatus('idle')
+      return
+    }
+
+    const nodes = buildRouteNodes(technicalStage.geometry, 2.5)
+    let cancelled = false
+    setOtherEnvironment([])
+    setOtherWeatherStatus('loading')
+
+    void fetchOpenMeteoForecast(nodes, otherPass.scheduledStart, event.timezone)
+      .then((snapshots) => {
+        if (cancelled) return
+        setOtherEnvironment(snapshots)
+        setOtherWeatherStatus('ready')
+      })
+      .catch(() => {
+        if (cancelled) return
+        setOtherEnvironment([])
+        setOtherWeatherStatus('unavailable')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [event.timezone, otherPass, technicalStage?.geometry])
+
+  const passComparisonView = useMemo(() => {
+    if (!passPair || currentEnvironment.length === 0 || otherEnvironment.length === 0) return null
+    const viewingFirstPass = stage.code === passPair.firstPass.code
+    const firstPassEnvironment = viewingFirstPass ? currentEnvironment : otherEnvironment
+    const secondPassEnvironment = viewingFirstPass ? otherEnvironment : currentEnvironment
+    return presentPassComparison(compareRouteWeather(firstPassEnvironment, secondPassEnvironment))
+  }, [currentEnvironment, otherEnvironment, passPair, stage.code])
+
+  const comparisonStatus = passComparisonView
+    ? 'ready'
+    : weatherStatus === 'unavailable' || otherWeatherStatus === 'unavailable'
+      ? 'unavailable'
+      : weatherStatus === 'loading' || otherWeatherStatus === 'loading'
+        ? 'loading'
+        : 'idle'
 
   const startSlots = useMemo(() => {
     if (!run) return []
@@ -204,6 +271,40 @@ export function StageDetail({
           <article><span>ELEV</span><strong>{formatRange(weatherSummary.elevationMinM, weatherSummary.elevationMaxM, 'm', 0)}</strong></article>
         </div>
       </section>
+
+      {passPair ? (
+        <section className="pass-comparison" aria-label={`Comparación meteorológica ${passPair.firstPass.code} contra ${passPair.secondPass.code}`}>
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">PASS 1 ↔ PASS 2 · MODELLED WEATHER</p>
+              <h2 className="editorial-subtitle">Mismo camino. Otro horario.</h2>
+            </div>
+            <p>{comparisonStatus === 'ready' ? 'Deltas calculados sobre los mismos nodos del recorrido.' : comparisonStatus === 'unavailable' ? 'No hay dos forecasts comparables disponibles ahora.' : 'Comparando los dos horarios planificados…'}</p>
+          </div>
+
+          <div className="pass-selector">
+            <a className={`pass-card${stage.code === passPair.firstPass.code ? ' pass-card--active' : ''}`} href={`#/${event.id}/${passPair.firstPass.slug}`}>
+              <span>PASS 1 · {passPair.firstPass.code}</span>
+              <strong>{formatClock(passPair.firstPass.scheduledStart, event.timezone)}</strong>
+              <small>{passPair.firstPass.name}</small>
+            </a>
+            <span className="pass-arrow" aria-hidden="true">→</span>
+            <a className={`pass-card${stage.code === passPair.secondPass.code ? ' pass-card--active' : ''}`} href={`#/${event.id}/${passPair.secondPass.slug}`}>
+              <span>PASS 2 · {passPair.secondPass.code}</span>
+              <strong>{formatClock(passPair.secondPass.scheduledStart, event.timezone)}</strong>
+              <small>{passPair.secondPass.name}</small>
+            </a>
+          </div>
+
+          <div className="pass-comparison-metrics">
+            <article><span>MEAN TEMP Δ</span><strong>{passComparisonView?.temperature ?? '—'}</strong></article>
+            <article><span>MAX GUST Δ</span><strong>{passComparisonView?.gusts ?? '—'}</strong></article>
+            <article><span>PRECIP SIGNAL Δ</span><strong>{passComparisonView?.precipitation ?? '—'}</strong></article>
+            <article><span>BIGGEST TEMP SHIFT</span><strong>{passComparisonView?.strongestShift ?? '—'}</strong></article>
+          </div>
+          <p className="panel-note">Δ = Pass 2 − Pass 1. Es una comparación de señal meteorológica modelada para dos horarios; no implica cambio observado de grip, barro, polvo ni estado de la calzada.</p>
+        </section>
+      ) : null}
 
       <RallyMap
         geometryStatus={geometryStatus}
