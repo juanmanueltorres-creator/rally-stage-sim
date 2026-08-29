@@ -1,0 +1,19 @@
+[
+  {
+    "stageId": "chile-2026-ss1-turquia-1",
+    "carNo": 0,
+    "expectedDurationSeconds": 826.4,
+    "playbackSpeed": 60,
+    "provenance": {
+      "state": "simulated",
+      "sources": [
+        {
+          "label": "ANARE Rally Nacimiento–Negrete 2026 — PE1 unofficial timing benchmark",
+          "url": "https://anarerally.cl/Resultados/tiemposPrime.php",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "Motion benchmark only: 13:46.4 from the local Rally2 PE1 winner on Turquía. It is not a WRC Rally1 prediction. Playback is accelerated 60× for visualization."
+    }
+  }
+]
