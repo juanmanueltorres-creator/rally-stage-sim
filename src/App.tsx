@@ -132,9 +132,15 @@ export function App() {
       const technicalStage = technicalStages.find((stage) => stage.code === selected.code) ?? null
       const run = technicalStage ? runs.find((candidate) => candidate.stageId === technicalStage.id) ?? null : null
       const spectatorStageId = technicalStage?.id ?? `${event.id}-${selected.code.toLowerCase()}`
+      const specificSpectatorInfo = spectator.find((candidate) => candidate.stageId === spectatorStageId)
+      const generalSpectatorInfo = spectator.find((candidate) => {
+        const templateStage = technicalStages.find((stage) => stage.id === candidate.stageId)
+        return templateStage?.date === selected.date && Boolean(candidate.roadClosureText || candidate.safetyTrain?.length)
+      })
       const spectatorInfo = normalizeSpectatorInfo(
-        spectator.find((candidate) => candidate.stageId === spectatorStageId),
+        specificSpectatorInfo,
         spectatorStageId,
+        generalSpectatorInfo,
       )
 
       content = (
