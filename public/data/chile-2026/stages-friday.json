@@ -1,0 +1,96 @@
+[
+  {
+    "id": "chile-2026-ss2-nuevo-rere-1",
+    "eventId": "chile-2026",
+    "sequence": 2,
+    "code": "SS2",
+    "name": "Nuevo Rere 1",
+    "date": "2026-09-11",
+    "scheduledStart": "2026-09-11T09:48:00-03:00",
+    "distanceKm": 10.76,
+    "surface": "unknown",
+    "geometryStatus": "reconstructed",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [-72.616800, -37.171750],
+        [-72.631875, -37.169333],
+        [-72.646950, -37.166917],
+        [-72.654733, -37.150750],
+        [-72.675600, -37.149650],
+        [-72.696400, -37.148550],
+        [-72.717283, -37.147467],
+        [-72.704725, -37.140517],
+        [-72.692167, -37.133567]
+      ]
+    },
+    "provenance": {
+      "state": "planned",
+      "sources": [
+        {
+          "label": "WRC — Rally Chile Bio Bío reveals revamped route for 2026",
+          "url": "https://www.wrc.com/en/news/rally-chile-bio-bio-reveals-revamped-route-for-2026",
+          "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "ANARE Rally — PE2 Nuevo Rere competition map, Nacimiento–Negrete 2026",
+          "url": "https://anarerally.cl/wp-content/uploads/2026/06/Nuevo_Rere.pdf",
+          "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "Rally Chile Bio Bío 2023 — official road book, historical Rere controls",
+          "url": "https://rallychilebiobio.com/wp-content/uploads/2023/08/RoadBook-Rally-Chile-Biobio-2023.pdf",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "Reference corridor reconstruction only, not an official GPS trace or road-centerline map-match. WRC identifies Nuevo Rere as the former Rere run in reverse with a new start. Historical Rere controls and the current ANARE competition map constrain the corridor, but the exact 2026 new start alignment remains pending a public coordinate-level source. Technical distance follows the current WRC route article (10.76 km), while the separate schedule snapshot preserves its published 10.92 km value."
+    }
+  },
+  {
+    "id": "chile-2026-ss3-hualqui-1",
+    "eventId": "chile-2026",
+    "sequence": 3,
+    "code": "SS3",
+    "name": "Hualqui 1",
+    "date": "2026-09-11",
+    "scheduledStart": "2026-09-11T10:36:00-03:00",
+    "distanceKm": 16.69,
+    "surface": "unknown",
+    "geometryStatus": "reconstructed",
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [-72.648667, -37.094567],
+        [-72.644450, -37.076150],
+        [-72.658033, -37.063000],
+        [-72.689550, -37.046583],
+        [-72.701950, -37.033217],
+        [-72.688567, -37.024750],
+        [-72.687850, -37.013367],
+        [-72.666150, -37.006300],
+        [-72.666720, -37.003640]
+      ]
+    },
+    "provenance": {
+      "state": "planned",
+      "sources": [
+        {
+          "label": "WRC — Rally Chile Bio Bío reveals revamped route for 2026",
+          "url": "https://www.wrc.com/en/news/rally-chile-bio-bio-reveals-revamped-route-for-2026",
+          "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "ANARE Rally — PE3 Hualqui competition map, Nacimiento–Negrete 2026",
+          "url": "https://anarerally.cl/wp-content/uploads/2026/06/Hualqui.pdf",
+          "accessedAt": "2026-08-29"
+        },
+        {
+          "label": "Rally Chile Bio Bío 2023 — official road book, historical Pulpería controls",
+          "url": "https://rallychilebiobio.com/wp-content/uploads/2023/08/RoadBook-Rally-Chile-Biobio-2023.pdf",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "Reference corridor reconstruction only, not an official GPS trace or road-centerline map-match. WRC describes Hualqui as a reversed and shortened evolution of Pulpería, beginning where Pulpería previously finished. The geometry uses historical Pulpería controls in reverse and an approximate shortened endpoint, constrained by the current ANARE competition map. Technical distance follows the current WRC route article (16.69 km), while the separate schedule snapshot preserves its published 16.79 km value."
+    }
+  }
+]
