@@ -1,47 +1,49 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { RallyEntry, RallyEvent, RallyStage, SimulatedStageRun } from './domain/rally'
-import { RallyMap } from './components/RallyMap'
-import { buildPlannedStartGrid } from './simulation/startGrid'
+import { useEffect, useState } from 'react'
+import type {
+  RallyEntry,
+  RallyEvent,
+  RallyScheduleStage,
+  RallyStage,
+  SimulatedStageRun,
+  StageSpectatorInfo,
+} from './domain/rally'
+import { normalizeSpectatorInfo } from './domain/spectator'
+import { parseAppRoute, type AppRoute } from './navigation/stageRoute'
+import { hasSeenIntro, markIntroSeen } from './presentation/introPreference'
+import { IntroOverlay } from './components/IntroOverlay'
+import { RallyOverview } from './components/RallyOverview'
+import { StageDetail } from './components/StageDetail'
 
 interface AppData {
   event: RallyEvent
-  stage: RallyStage
-  run: SimulatedStageRun
+  technicalStages: RallyStage[]
+  schedule: RallyScheduleStage[]
+  runs: SimulatedStageRun[]
   entries: RallyEntry[]
+  spectator: StageSpectatorInfo[]
 }
 
-function formatLocalStart(iso: string, timezone: string): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: timezone,
-  }).format(new Date(iso))
+function initialRoute(): AppRoute {
+  if (typeof window === 'undefined') return { kind: 'overview' }
+  return parseAppRoute(window.location.hash)
 }
 
-function formatLocalClock(timestampMs: number, timezone: string): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: timezone,
-  }).format(new Date(timestampMs))
-}
-
-function formatDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60)
-  const remaining = seconds - minutes * 60
-  return `${minutes}:${remaining.toFixed(1).padStart(4, '0')}`
-}
-
-function formatInterval(seconds: number): string {
-  const minutes = Math.floor(seconds / 60)
-  const remaining = seconds - minutes * 60
-  return `${minutes}:${String(remaining).padStart(2, '0')}`
+function initialIntroVisibility(): boolean {
+  if (typeof window === 'undefined') return true
+  return !hasSeenIntro(window.localStorage)
 }
 
 export function App() {
   const [data, setData] = useState<AppData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [route, setRoute] = useState<AppRoute>(initialRoute)
+  const [showIntro, setShowIntro] = useState(initialIntroVisibility)
+
+  useEffect(() => {
+    const handleHashChange = () => setRoute(parseAppRoute(window.location.hash))
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -49,33 +51,38 @@ export function App() {
     async function load() {
       try {
         const base = import.meta.env.BASE_URL
-        const [eventResponse, stagesResponse, simulationResponse, entriesResponse] = await Promise.all([
+        const [eventResponse, stagesResponse, scheduleResponse, simulationResponse, entriesResponse, spectatorResponse] = await Promise.all([
           fetch(`${base}data/chile-2026/event.json`),
           fetch(`${base}data/chile-2026/stages.json`),
+          fetch(`${base}data/chile-2026/schedule.json`),
           fetch(`${base}data/chile-2026/simulation.json`),
           fetch(`${base}data/chile-2026/entries.json`),
+          fetch(`${base}data/chile-2026/spectator.json`),
         ])
 
-        if (!eventResponse.ok || !stagesResponse.ok || !simulationResponse.ok || !entriesResponse.ok) {
-          throw new Error('Could not load the Chile 2026 snapshot')
+        if (
+          !eventResponse.ok ||
+          !stagesResponse.ok ||
+          !scheduleResponse.ok ||
+          !simulationResponse.ok ||
+          !entriesResponse.ok ||
+          !spectatorResponse.ok
+        ) {
+          throw new Error('No se pudo cargar el snapshot de Rally Chile 2026')
         }
 
-        const event = (await eventResponse.json()) as RallyEvent
-        const stages = (await stagesResponse.json()) as RallyStage[]
-        const runs = (await simulationResponse.json()) as SimulatedStageRun[]
-        const entries = (await entriesResponse.json()) as RallyEntry[]
-        const stage = stages.find((candidate) => candidate.code === 'SS1')
+        const loaded: AppData = {
+          event: (await eventResponse.json()) as RallyEvent,
+          technicalStages: (await stagesResponse.json()) as RallyStage[],
+          schedule: (await scheduleResponse.json()) as RallyScheduleStage[],
+          runs: (await simulationResponse.json()) as SimulatedStageRun[],
+          entries: (await entriesResponse.json()) as RallyEntry[],
+          spectator: (await spectatorResponse.json()) as StageSpectatorInfo[],
+        }
 
-        if (!stage) throw new Error('SS1 is missing from the Chile 2026 snapshot')
-
-        const run = runs.find((candidate) => candidate.stageId === stage.id)
-        if (!run) throw new Error('SS1 simulation configuration is missing')
-
-        if (!cancelled) setData({ event, stage, run, entries })
+        if (!cancelled) setData(loaded)
       } catch (cause) {
-        if (!cancelled) {
-          setError(cause instanceof Error ? cause.message : 'Unknown loading error')
-        }
+        if (!cancelled) setError(cause instanceof Error ? cause.message : 'Error de carga desconocido')
       }
     }
 
@@ -85,152 +92,76 @@ export function App() {
     }
   }, [])
 
-  const sourceCount = useMemo(
-    () => (data ? data.stage.provenance.sources.length + data.run.provenance.sources.length : 0),
-    [data],
-  )
-
-  const startSlots = useMemo(() => {
-    if (!data) return []
-    const stageStartMs = Date.parse(data.stage.scheduledStart)
-    return buildPlannedStartGrid(data.run.carCount, data.run.startIntervalSeconds).map((slot) => ({
-      ...slot,
-      clock: formatLocalClock(stageStartMs + slot.startOffsetSeconds * 1_000, data.event.timezone),
-    }))
-  }, [data])
+  function enterExperience() {
+    markIntroSeen(typeof window !== 'undefined' ? window.localStorage : null)
+    setShowIntro(false)
+  }
 
   if (error) {
     return <main className="app-shell"><p className="load-error">{error}</p></main>
   }
 
   if (!data) {
-    return <main className="app-shell"><p className="loading">Loading sourced rally snapshot…</p></main>
+    return <main className="app-shell"><p className="loading">Cargando Rally Chile 2026…</p></main>
   }
 
-  const { event, stage, run, entries } = data
-  const allSources = [...stage.provenance.sources, ...run.provenance.sources]
+  const { event, technicalStages, schedule, runs, entries, spectator } = data
+  let content
+
+  if (route.kind === 'stage' && route.eventId === event.id) {
+    const selected = schedule.find((stage) => stage.slug === route.stageSlug)
+
+    if (selected) {
+      const technicalStage = technicalStages.find((stage) => stage.code === selected.code) ?? null
+      const run = technicalStage ? runs.find((candidate) => candidate.stageId === technicalStage.id) ?? null : null
+      const spectatorStageId = technicalStage?.id ?? `${event.id}-${selected.code.toLowerCase()}`
+      const spectatorInfo = normalizeSpectatorInfo(
+        spectator.find((candidate) => candidate.stageId === spectatorStageId),
+        spectatorStageId,
+      )
+
+      content = (
+        <StageDetail
+          event={event}
+          stage={selected}
+          technicalStage={technicalStage}
+          run={run}
+          entries={entries}
+          spectator={spectatorInfo}
+          onOpenIntro={() => setShowIntro(true)}
+        />
+      )
+    } else {
+      content = (
+        <RallyOverview
+          event={event}
+          schedule={schedule}
+          notice="Ese link de tramo todavía no existe en este snapshot"
+          onOpenIntro={() => setShowIntro(true)}
+        />
+      )
+    }
+  } else {
+    const notice = route.kind === 'overview'
+      ? route.notice
+      : route.kind === 'stage'
+        ? 'El evento del link no coincide con Rally Chile 2026'
+        : undefined
+
+    content = (
+      <RallyOverview
+        event={event}
+        schedule={schedule}
+        notice={notice}
+        onOpenIntro={() => setShowIntro(true)}
+      />
+    )
+  }
 
   return (
-    <main className="app-shell">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">RALLY STAGE SIM · PRE-EVENT DATASET</p>
-          <h1>{event.name}</h1>
-          <p className="hero-copy">Space + time + performance context, without pretending estimates are telemetry.</p>
-        </div>
-        <div className="event-chip">
-          <span>ROUND CONTEXT</span>
-          <strong>{event.startDate} → {event.endDate}</strong>
-        </div>
-      </header>
-
-      <section className="stage-grid" aria-label="Selected stage summary">
-        <article className="stage-card stage-card--primary">
-          <p className="eyebrow">{stage.code}</p>
-          <h2>{stage.name}</h2>
-          <div className="metrics">
-            <div><span>DISTANCE</span><strong>{stage.distanceKm.toFixed(2)} km</strong></div>
-            <div><span>FIRST SLOT</span><strong>{formatLocalStart(stage.scheduledStart, event.timezone)}</strong></div>
-            <div><span>GEOMETRY</span><strong>{stage.geometryStatus}</strong></div>
-            <div><span>SOURCES</span><strong>{sourceCount}</strong></div>
-          </div>
-        </article>
-
-        <article className="stage-card">
-          <p className="eyebrow">REFERENCE RECONSTRUCTION</p>
-          <h2>No fake GPS</h2>
-          <p>
-            The line is map-matched from OpenStreetMap roads against the organizer&apos;s PE1 Turquía competition map.
-            It is useful for simulation, but it is not an official GPS trace.
-          </p>
-          <span className="integrity-badge">{stage.geometryStatus}</span>
-        </article>
-
-        <article className="stage-card">
-          <p className="eyebrow">SIMULATED P1 FLEET</p>
-          <h2>{run.carCount} cars · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×</h2>
-          <p>
-            Generic P1 slots use a common stage clock. The published entry list confirms ten RC1/Rally1 P1 crews, but its order is not treated as the official running order.
-          </p>
-          <span className="integrity-badge">{run.provenance.state}</span>
-        </article>
-
-        <article className="stage-card">
-          <p className="eyebrow">MOTION BENCHMARK</p>
-          <h2>{formatDuration(run.expectedDurationSeconds)} reference pace</h2>
-          <p>
-            The motion benchmark comes from a local Rally2 run on the same PE1. It validates movement only and is not a WRC Rally1 forecast.
-          </p>
-          <span className="integrity-badge">benchmark only</span>
-        </article>
-      </section>
-
-      <section className="start-grid-panel" aria-label="Simulated P1 start grid">
-        <div className="start-grid-header">
-          <div>
-            <p className="eyebrow">SIMULATED START GRID · {run.priority}</p>
-            <h2>{formatInterval(run.startIntervalSeconds)} planning interval</h2>
-          </div>
-          <p>Generic slots only. Official entry-list order ≠ official start order. Event start lists and instructions override this model.</p>
-        </div>
-        <div className="start-grid-slots">
-          {startSlots.map((slot) => (
-            <div className="start-slot" key={slot.simulationId}>
-              <span>{slot.simulationId}</span>
-              <strong>{slot.clock}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="entry-roster-panel" aria-label="Official RC1 entry roster">
-        <div className="entry-roster-header">
-          <div>
-            <p className="eyebrow">OFFICIAL RC1 ENTRY ROSTER · P1</p>
-            <h2>{entries.length} Rally1 crews entered</h2>
-          </div>
-          <p>Official entry-list context only. These rows are intentionally not mapped to SIM-01…SIM-10 until an official start list defines the running order.</p>
-        </div>
-        <div className="entry-roster-grid">
-          {entries.map((entry) => (
-            <article className="entry-card" key={entry.carNo}>
-              <div className="entry-number">#{entry.carNo}</div>
-              <div>
-                <strong>{entry.driver}</strong>
-                <span>{entry.coDriver}</span>
-                <small>{entry.car}</small>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <RallyMap
-        geometryStatus={stage.geometryStatus}
-        geometry={stage.geometry}
-        run={run}
-        scheduledStart={stage.scheduledStart}
-        timezone={event.timezone}
-      />
-
-      <section className="sources" aria-label="Data sources">
-        <div>
-          <p className="eyebrow">PROVENANCE</p>
-          <h2>What this screen actually knows</h2>
-        </div>
-        <ul>
-          {allSources.map((source) => (
-            <li key={source.url}>
-              <a href={source.url} target="_blank" rel="noreferrer">{source.label}</a>
-              <span>accessed {source.accessedAt}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <footer>
-        Unofficial open-source project. Not affiliated with FIA, WRC Promoter GmbH or event organizers.
-      </footer>
-    </main>
+    <>
+      {content}
+      {showIntro ? <IntroOverlay onEnter={enterExperience} /> : null}
+    </>
   )
 }
