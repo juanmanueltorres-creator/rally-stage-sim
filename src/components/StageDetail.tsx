@@ -32,6 +32,18 @@ function formatClock(iso: string, timezone: string): string {
   }).format(new Date(iso))
 }
 
+function formatDateTime(iso: string, timezone: string): string {
+  return new Intl.DateTimeFormat('es-AR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: timezone,
+  }).format(new Date(iso))
+}
+
 function formatRange(min: number | null, max: number | null, unit: string, decimals = 1): string {
   if (min === null || max === null) return '—'
   return `${min.toFixed(decimals)}–${max.toFixed(decimals)} ${unit}`
@@ -57,6 +69,15 @@ function formatInterval(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
   const remaining = seconds - minutes * 60
   return `${minutes}:${String(remaining).padStart(2, '0')}`
+}
+
+function formatSafetyOffset(offsetMinutes: number): string {
+  if (offsetMinutes === 0) return 'T±0'
+  const absolute = Math.abs(offsetMinutes)
+  const hours = Math.floor(absolute / 60)
+  const minutes = absolute % 60
+  const detail = hours > 0 ? `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}` : `${minutes}m`
+  return `${offsetMinutes < 0 ? 'T−' : 'T+'}${detail}`
 }
 
 export function StageDetail({
@@ -86,6 +107,15 @@ export function StageDetail({
       clock: formatClock(new Date(stageStartMs + slot.startOffsetSeconds * 1_000).toISOString(), event.timezone),
     }))
   }, [event.timezone, run, stage.scheduledStart])
+
+  const safetyTimeline = useMemo(() => {
+    const stageStartMs = Date.parse(stage.scheduledStart)
+    return (spectator.safetyTrain ?? []).map((step) => ({
+      ...step,
+      clock: formatClock(new Date(stageStartMs + step.offsetMinutes * 60_000).toISOString(), event.timezone),
+      relative: formatSafetyOffset(step.offsetMinutes),
+    }))
+  }, [event.timezone, spectator.safetyTrain, stage.scheduledStart])
 
   const conditions = describeStageConditions(weatherSummary)
   const geometryStatus = technicalStage?.geometryStatus ?? 'pending-verification'
@@ -172,6 +202,7 @@ export function StageDetail({
         geometryStatus={geometryStatus}
         geometry={technicalStage?.geometry ?? null}
         run={run}
+        spectator={spectator}
         scheduledStart={stage.scheduledStart}
         timezone={event.timezone}
         simulationEnabled={simulationOpen}
@@ -192,14 +223,45 @@ export function StageDetail({
           <p className="eyebrow">PARA IR AL TRAMO</p>
           <h2 className="editorial-subtitle">Acceso y seguridad.</h2>
           <dl className="spectator-facts">
-            <div><dt>ACCESO OFICIAL</dt><dd className={spectator.accessStatus === 'pending' ? 'pending-value' : ''}>{spectator.accessStatus === 'pending' ? 'PENDING' : 'PUBLICADO'}</dd></div>
+            <div><dt>ACCESO ESPECÍFICO SS1</dt><dd className={spectator.accessStatus === 'pending' ? 'pending-value' : ''}>{spectator.accessStatus === 'pending' ? 'PENDING OFFICIAL POINTS' : 'PUBLICADO'}</dd></div>
+            <div><dt>CIERRE GENERAL</dt><dd>{spectator.roadClosureAt ? formatDateTime(spectator.roadClosureAt, event.timezone) : spectator.roadClosureText ?? 'PENDING'}</dd></div>
             <div><dt>PARKING</dt><dd className="pending-value">{spectator.parking.length > 0 ? `${spectator.parking.length} punto(s)` : 'PENDING OFFICIAL GUIDE'}</dd></div>
             <div><dt>ZONAS DE PÚBLICO</dt><dd className="pending-value">{spectator.spectatorZones.length > 0 ? `${spectator.spectatorZones.length} publicada(s)` : 'PENDING'}</dd></div>
-            <div><dt>CIERRE / ACCESO</dt><dd>{spectator.roadClosureText ?? 'PENDING'}</dd></div>
+            {spectator.capacityNote ? <div><dt>CAPACIDAD</dt><dd>{spectator.capacityNote}</dd></div> : null}
+            {spectator.exitRule ? <div><dt>SALIDA</dt><dd>{spectator.exitRule}</dd></div> : null}
           </dl>
           {spectator.safetyNote ? <p className="safety-note"><strong>SEGURIDAD</strong>{spectator.safetyNote}</p> : null}
         </article>
       </section>
+
+      {safetyTimeline.length > 0 ? (
+        <section className="safety-train-panel" aria-label="Tren de seguridad antes de SS1">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">TREN DE SEGURIDAD · HORARIO DERIVADO</p>
+              <h2 className="editorial-subtitle">La ruta se vuelve operativa antes del primer auto.</h2>
+            </div>
+            <p>Las horas se calculan desde la largada prevista de {formatClock(stage.scheduledStart, event.timezone)} usando los offsets publicados para el dispositivo de seguridad.</p>
+          </div>
+          <div className="safety-timeline">
+            {safetyTimeline.map((step) => (
+              <article className="safety-step" key={step.id}>
+                <span className="safety-step-offset">{step.relative}</span>
+                <strong>{step.clock}</strong>
+                <h3>{step.label}</h3>
+                {step.description ? <p>{step.description}</p> : null}
+              </article>
+            ))}
+            <article className="safety-step safety-step--start">
+              <span className="safety-step-offset">T±0</span>
+              <strong>{formatClock(stage.scheduledStart, event.timezone)}</strong>
+              <h3>SS1 · primer auto</h3>
+              <p>Inicio previsto de la competencia en Turquía.</p>
+            </article>
+          </div>
+          <p className="panel-note">Los horarios operativos pueden cambiar por instrucciones del organizador, capacidad, seguridad o dirección de carrera. La publicación oficial prevalece sobre esta derivación.</p>
+        </section>
+      ) : null}
 
       <section className="simulation-gate" aria-label="Simulación opcional del tramo">
         <div>
