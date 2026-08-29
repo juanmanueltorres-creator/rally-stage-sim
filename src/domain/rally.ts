@@ -45,6 +45,19 @@ export interface RallyStage {
   provenance: DataProvenance
 }
 
+export interface RallyScheduleStage {
+  eventId: string
+  sequence: number
+  code: string
+  slug: string
+  name: string
+  date: string
+  scheduledStart: string
+  distanceKm: number
+  interactive: boolean
+  provenance: DataProvenance
+}
+
 export interface RallyEntry {
   carNo: number
   driver: string
