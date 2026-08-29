@@ -37,7 +37,6 @@ export function RallyMap({ geometryStatus }: RallyMapProps) {
       style: MAP_STYLE,
       center: [-73.05, -36.82],
       zoom: 7,
-      attributionControl: true,
     })
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right')
