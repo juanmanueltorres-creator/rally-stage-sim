@@ -22,6 +22,8 @@ Current scenario:
 - Runtime interactivity is derived from loaded technical geometry through `withTechnicalAvailability`; the schedule snapshot remains an independent source snapshot rather than encoding application capability.
 - WRC states that each of Friday's three stages is run twice. `stage-route-reuse.json` therefore maps SS4→SS1, SS5→SS2 and SS6→SS3 without duplicating route coordinates.
 - Each repeated stage keeps its own identity and planned start time, so environmental context is requested for the afternoon pass rather than reusing the morning forecast: SS4 15:09, SS5 16:04 and SS6 16:52 local time.
+- Repeated Friday stages expose a **PASS 1 ↔ PASS 2 model-weather comparison**. Deltas are always `Pass 2 − Pass 1` for mean temperature, maximum gust and precipitation signal, plus the sampled route node with the largest temperature shift.
+- The pass comparison is explicitly meteorological model context. It does **not** claim an observed change in grip, mud, dust or road condition.
 - SS1 / SS4 Turquía: 22.94 km, with a dense ~22.90 km road-centerline reconstruction map-matched from OpenStreetMap against the organizer/local competition map.
 - SS2 / SS5 Nuevo Rere: WRC technical source 10.76 km; the separate schedule snapshot currently says 10.92 km. The UI exposes both rather than silently reconciling them.
 - SS3 / SS6 Hualqui: WRC technical source 16.69 km; the separate schedule snapshot currently says 16.79 km. The UI exposes both rather than silently reconciling them.
@@ -51,6 +53,8 @@ The map therefore uses a source-neutral integrity message: a reconstructed line 
 Dense geometry materially improves route shape, start/finish localization and environmental-node placement, but density alone does not establish authority. Environmental sampling still inherits the evidential quality of the route geometry: Open-Meteo values are useful stage-scale model context and should not be interpreted as observed corner-by-corner conditions.
 
 A repeated pass reuses the route geometry only. **Time-dependent context does not get copied.** SS4, SS5 and SS6 retain their own scheduled starts, so weather requests and safety-train timelines are recomputed for the afternoon pass.
+
+The pass comparator requests both planned start-time forecasts over the same 2.5 km visualization nodes and calculates `Pass 2 − Pass 1`. Missing model values stay unavailable rather than being coerced to zero.
 
 ## Spectator and access integrity
 
@@ -105,12 +109,13 @@ The reconstructed routes are **not official GPS traces**, the simulated start gr
 
 - Explicit START and FINISH markers plus context nodes every 2.5 km along each interactive reference route.
 - Client-side Open-Meteo context for the planned stage start: temperature, 10 m wind, gusts, precipitation and returned location elevation.
+- Repeated-route pages compare morning and afternoon model snapshots over matching route-node IDs, while keeping Pass 1 as the baseline on either page.
 - The forecast request explicitly enables the 16-day horizon so the pre-event Chile scenario remains inside the documented forecast window.
 - The first map view intentionally contains no place-name labels.
 
 The 2.5 km node spacing is a visualization sampling interval. It does **not** claim 2.5 km meteorological resolution, and Open-Meteo values are modelled context rather than local station observations.
 
-If the forecast is outside the available model horizon or the external API is unavailable, route geometry, markers and access state remain usable without weather values.
+If the forecast is outside the available model horizon or the external API is unavailable, route geometry, markers and access state remain usable without weather values. Pass deltas remain `—` until both model snapshots are available.
 
 ## Data rule
 
@@ -127,6 +132,7 @@ Additional integrity rules:
 - Reconstruction method and confidence can differ by stage even when the shared state is `reconstructed`.
 - Dense third-party geometry does not become official GPS merely because it contains many coordinates.
 - Reusing geometry for a repeated pass does not reuse time-dependent weather or operational timing.
+- Pass-to-pass model deltas do not become observations of grip or road evolution.
 - Modelled environmental context stays explicitly different from observations.
 - The precision of derived environmental sampling cannot exceed the practical quality of the reference geometry.
 - Schedule distance and technical distance remain separate when current public sources disagree.
@@ -169,6 +175,10 @@ The technical route data stays normalized instead of copying hundreds of coordin
 `stages.json (SS1) + stages-friday.json (SS2/SS3) + stage-route-reuse.json (SS4→SS1, SS5→SS2, SS6→SS3) → technical stage catalog`
 
 The reuse mapping copies route geometry/method while stage identity, sequence and planned start come from the independent schedule snapshot. That makes the afternoon weather and safety timeline time-specific without duplicating the route itself.
+
+Repeated-pass comparison follows the same normalized mapping:
+
+`findRouteReusePair → fetch both pass-time forecasts on matching route nodes → compareRouteWeather → presentPassComparison`
 
 Vehicle movement stays deliberately small and replaceable:
 
