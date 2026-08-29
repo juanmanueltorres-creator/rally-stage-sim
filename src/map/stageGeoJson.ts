@@ -9,11 +9,23 @@ type StageMapKind =
   | 'environment-node'
   | 'stage-finish'
 
+type SimulatedVehicleStatus = 'waiting' | 'running' | 'finished'
+
+export interface StageMapVehicle {
+  simulationId: string
+  status: SimulatedVehicleStatus
+  progress: number
+  coordinate: [number, number]
+}
+
 type StageMapProperties = {
   kind: StageMapKind
   geometryStatus?: StageGeometryStatus
   nodeId?: string
   distanceKm?: number
+  simulationId?: string
+  status?: SimulatedVehicleStatus
+  progress?: number
 }
 
 function nodeKind(node: RouteNode): StageMapKind {
@@ -22,12 +34,27 @@ function nodeKind(node: RouteNode): StageMapKind {
   return 'environment-node'
 }
 
+function normalizeVehicles(vehicles: StageMapVehicle[] | [number, number]): StageMapVehicle[] {
+  if (typeof vehicles[0] === 'number') {
+    return [{
+      simulationId: 'SIM-01',
+      status: 'running',
+      progress: 0,
+      coordinate: vehicles as [number, number],
+    }]
+  }
+
+  return vehicles as StageMapVehicle[]
+}
+
 export function buildStageGeoJson(
   line: StageLineString,
-  vehicleCoordinate: [number, number],
+  vehicleInput: StageMapVehicle[] | [number, number],
   geometryStatus: StageGeometryStatus,
   nodes: RouteNode[] = [],
 ): FeatureCollection<LineString | Point, StageMapProperties> {
+  const vehicles = normalizeVehicles(vehicleInput)
+
   return {
     type: 'FeatureCollection',
     features: [
@@ -42,16 +69,19 @@ export function buildStageGeoJson(
           coordinates: line.coordinates,
         },
       },
-      {
-        type: 'Feature',
+      ...vehicles.map((vehicle) => ({
+        type: 'Feature' as const,
         properties: {
-          kind: 'simulated-vehicle',
+          kind: 'simulated-vehicle' as const,
+          simulationId: vehicle.simulationId,
+          status: vehicle.status,
+          progress: vehicle.progress,
         },
         geometry: {
-          type: 'Point',
-          coordinates: vehicleCoordinate,
+          type: 'Point' as const,
+          coordinates: vehicle.coordinate,
         },
-      },
+      })),
       ...nodes.map((node) => ({
         type: 'Feature' as const,
         properties: {
