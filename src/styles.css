@@ -143,14 +143,16 @@ h2 {
   text-transform: uppercase;
 }
 
-.start-grid-panel {
+.start-grid-panel,
+.entry-roster-panel {
   margin-bottom: 12px;
   padding: 18px;
   border: 1px solid #292d32;
   background: #0f1115;
 }
 
-.start-grid-header {
+.start-grid-header,
+.entry-roster-header {
   display: grid;
   grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
   gap: 24px;
@@ -159,9 +161,11 @@ h2 {
   border-bottom: 1px solid #292d32;
 }
 
-.start-grid-header h2 { margin-bottom: 0; }
+.start-grid-header h2,
+.entry-roster-header h2 { margin-bottom: 0; }
 
-.start-grid-header > p {
+.start-grid-header > p,
+.entry-roster-header > p {
   margin: 0;
   color: #8e949b;
   font-size: 0.78rem;
@@ -197,6 +201,58 @@ h2 {
   margin-top: 4px;
   color: #f1f1ed;
   font-size: 0.82rem;
+}
+
+.entry-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.entry-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #2d3238;
+  background: #12151a;
+}
+
+.entry-number {
+  min-width: 34px;
+  color: #ff8063;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.entry-card > div:last-child { min-width: 0; }
+.entry-card strong,
+.entry-card span,
+.entry-card small { display: block; }
+
+.entry-card strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entry-card span {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #899099;
+  font-size: 0.69rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entry-card small {
+  margin-top: 7px;
+  color: #646c75;
+  font-size: 0.63rem;
+  line-height: 1.35;
 }
 
 .map-panel {
@@ -389,6 +445,10 @@ footer {
 
 .load-error { color: #ff9f8a; }
 
+@media (max-width: 1000px) {
+  .entry-roster-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 900px) {
   .start-grid-slots { grid-template-columns: repeat(5, minmax(70px, 1fr)); }
 }
@@ -397,13 +457,17 @@ footer {
   .app-shell { width: min(100% - 22px, 1180px); padding-top: 24px; }
   .hero { align-items: stretch; flex-direction: column; }
   .event-chip { min-width: 0; }
-  .stage-grid, .sources, .environment-header, .start-grid-header { grid-template-columns: 1fr; }
+  .stage-grid, .sources, .environment-header, .start-grid-header, .entry-roster-header { grid-template-columns: 1fr; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sources { gap: 8px; }
   .sources li { align-items: flex-start; flex-direction: column; gap: 5px; }
   .map-canvas { height: 420px; }
   .map-status { align-items: flex-start; flex-direction: column; }
   .environment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  .entry-roster-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 460px) {
