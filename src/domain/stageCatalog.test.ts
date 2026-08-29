@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { RallyScheduleStage, RallyStage, StageRouteReuse } from './rally.ts'
-import { materializeTechnicalStages, withTechnicalAvailability } from './stageCatalog.ts'
+import { findRouteReusePair, materializeTechnicalStages, withTechnicalAvailability } from './stageCatalog.ts'
 
 const schedule = [
   { code: 'SS1', interactive: true },
@@ -100,4 +100,16 @@ test('materializeTechnicalStages fails closed when a reuse mapping references a 
     () => materializeTechnicalStages(repeatedSchedule, [], reuse),
     /SS4.*SS1/i,
   )
+})
+
+test('findRouteReusePair resolves the same first and second pass pair from either stage code', () => {
+  const reuse = [{
+    stageCode: 'SS5',
+    sourceStageCode: 'SS2',
+    provenance: { state: 'planned', sources: [] },
+  }] as StageRouteReuse[]
+
+  assert.deepEqual(findRouteReusePair('SS2', reuse), { firstPassCode: 'SS2', secondPassCode: 'SS5' })
+  assert.deepEqual(findRouteReusePair('SS5', reuse), { firstPassCode: 'SS2', secondPassCode: 'SS5' })
+  assert.equal(findRouteReusePair('SS7', reuse), null)
 })
