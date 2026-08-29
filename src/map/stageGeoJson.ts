@@ -1,5 +1,5 @@
 import type { FeatureCollection, LineString, Point } from 'geojson'
-import type { StageGeometryStatus, StageLineString } from '../domain/rally.ts'
+import type { SpectatorPoint, StageGeometryStatus, StageLineString } from '../domain/rally.ts'
 import type { RouteNode } from './environmentNodes.ts'
 
 type StageMapKind =
@@ -8,6 +8,8 @@ type StageMapKind =
   | 'stage-start'
   | 'environment-node'
   | 'stage-finish'
+  | 'spectator-zone'
+  | 'spectator-parking'
 
 type SimulatedVehicleStatus = 'waiting' | 'running' | 'finished'
 
@@ -18,6 +20,11 @@ export interface StageMapVehicle {
   coordinate: [number, number]
 }
 
+export interface StageMapSpectatorContext {
+  spectatorZones: SpectatorPoint[]
+  parking: SpectatorPoint[]
+}
+
 type StageMapProperties = {
   kind: StageMapKind
   geometryStatus?: StageGeometryStatus
@@ -26,6 +33,9 @@ type StageMapProperties = {
   simulationId?: string
   status?: SimulatedVehicleStatus
   progress?: number
+  spectatorId?: string
+  label?: string
+  description?: string
 }
 
 function nodeKind(node: RouteNode): StageMapKind {
@@ -47,11 +57,33 @@ function normalizeVehicles(vehicles: StageMapVehicle[] | [number, number]): Stag
   return vehicles as StageMapVehicle[]
 }
 
+function spectatorFeatures(
+  points: SpectatorPoint[],
+  kind: 'spectator-zone' | 'spectator-parking',
+) {
+  return points
+    .filter((point): point is SpectatorPoint & { coordinate: [number, number] } => Boolean(point.coordinate))
+    .map((point) => ({
+      type: 'Feature' as const,
+      properties: {
+        kind,
+        spectatorId: point.id,
+        label: point.label,
+        description: point.description,
+      },
+      geometry: {
+        type: 'Point' as const,
+        coordinates: point.coordinate,
+      },
+    }))
+}
+
 export function buildStageGeoJson(
   line: StageLineString,
   vehicleInput: StageMapVehicle[] | [number, number],
   geometryStatus: StageGeometryStatus,
   nodes: RouteNode[] = [],
+  spectator: StageMapSpectatorContext = { spectatorZones: [], parking: [] },
 ): FeatureCollection<LineString | Point, StageMapProperties> {
   const vehicles = normalizeVehicles(vehicleInput)
 
@@ -94,6 +126,8 @@ export function buildStageGeoJson(
           coordinates: node.coordinate,
         },
       })),
+      ...spectatorFeatures(spectator.spectatorZones, 'spectator-zone'),
+      ...spectatorFeatures(spectator.parking, 'spectator-parking'),
     ],
   }
 }
