@@ -1,5 +1,13 @@
 import type { RouteNode } from './environmentNodes.ts'
 
+const HOURLY_VARIABLES = [
+  'temperature_2m',
+  'wind_speed_10m',
+  'wind_direction_10m',
+  'wind_gusts_10m',
+  'precipitation',
+] as const
+
 interface OpenMeteoHourlyPayload {
   time?: string[]
   temperature_2m?: Array<number | null>
@@ -56,6 +64,28 @@ function valueAt(values: Array<number | null> | undefined, index: number): numbe
   if (!values || index < 0) return null
   const value = values[index]
   return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+export function buildOpenMeteoForecastUrl(
+  nodes: RouteNode[],
+  targetIso: string,
+  timezone: string,
+): string {
+  if (nodes.length === 0) {
+    throw new Error('at least one route node is required')
+  }
+
+  const date = targetIso.slice(0, 10)
+  const params = new URLSearchParams({
+    latitude: nodes.map((node) => node.coordinate[1]).join(','),
+    longitude: nodes.map((node) => node.coordinate[0]).join(','),
+    hourly: HOURLY_VARIABLES.join(','),
+    timezone,
+    start_date: date,
+    end_date: date,
+  })
+
+  return `https://api.open-meteo.com/v1/forecast?${params.toString()}`
 }
 
 export function normalizeOpenMeteoForecast(
