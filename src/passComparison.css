@@ -1,0 +1,113 @@
+.pass-comparison {
+  margin-bottom: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.pass-selector {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  margin-top: 12px;
+}
+
+.pass-card {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid #2d383e;
+  background: #090e12;
+  color: #c5cccf;
+  text-decoration: none;
+}
+
+.pass-card:hover {
+  border-color: #6c5734;
+  background: #0d1113;
+}
+
+.pass-card--active {
+  border-color: var(--amber);
+  background: #15120c;
+}
+
+.pass-card span {
+  color: var(--amber);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+}
+
+.pass-card strong {
+  font-size: 1rem;
+}
+
+.pass-card small {
+  overflow: hidden;
+  color: var(--dim);
+  font-size: 0.64rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pass-arrow {
+  align-self: center;
+  color: #69747a;
+  font-size: 1.15rem;
+}
+
+.pass-comparison-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.pass-comparison-metrics article {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #26343b;
+  background: #091116;
+}
+
+.pass-comparison-metrics span,
+.pass-comparison-metrics strong {
+  display: block;
+}
+
+.pass-comparison-metrics span {
+  color: #6b8791;
+  font-size: 0.55rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.pass-comparison-metrics strong {
+  margin-top: 5px;
+  color: #bcebf3;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 760px) {
+  .pass-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .pass-arrow {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+
+  .pass-comparison-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .pass-comparison-metrics {
+    grid-template-columns: 1fr;
+  }
+}
