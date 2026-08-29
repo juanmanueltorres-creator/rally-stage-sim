@@ -1,6 +1,6 @@
 export type DataState = 'planned' | 'simulated' | 'observed'
 
-export type StageGeometryStatus = 'pending-verification' | 'verified'
+export type StageGeometryStatus = 'pending-verification' | 'reconstructed' | 'verified'
 
 export interface DataSource {
   label: string
@@ -42,5 +42,24 @@ export interface RallyStage {
   surface: 'gravel' | 'tarmac' | 'mixed' | 'unknown'
   geometryStatus: StageGeometryStatus
   geometry: StageLineString | null
+  provenance: DataProvenance
+}
+
+export interface RallyEntry {
+  carNo: number
+  driver: string
+  coDriver: string
+  entrant: string
+  car: string
+  class: string
+  priority: string
+  provenance: DataProvenance
+}
+
+export interface SimulatedStageRun {
+  stageId: string
+  carNo: number
+  expectedDurationSeconds: number
+  playbackSpeed: number
   provenance: DataProvenance
 }
