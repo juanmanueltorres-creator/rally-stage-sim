@@ -1,0 +1,32 @@
+name: WRC geometry probe
+
+on:
+  push:
+    branches:
+      - feat/chile-2026-foundation
+    paths:
+      - scripts/probe-wrc-geometry.mjs
+      - .github/workflows/wrc-geometry-probe.yml
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Probe WRC event geometry feed
+        run: node scripts/probe-wrc-geometry.mjs
+
+      - name: Upload probe output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wrc-geometry-probe
+          path: artifacts/wrc-geometry-probe
+          if-no-files-found: error
