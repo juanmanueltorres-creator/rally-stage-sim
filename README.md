@@ -47,6 +47,8 @@ The map can show:
 
 The analytical weather sampling remains every 2.5 km, but only a few representative labels are drawn by default so the map stays readable.
 
+The stage detail uses a map-first command view: the route and operational status stay visible first, while node-by-node weather, safety timing, simulation details and provenance remain available in collapsible sections below.
+
 ## Weather
 
 The app does not assume that a rally date is always inside the forecast window.
