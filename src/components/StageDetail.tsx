@@ -8,7 +8,8 @@ import type {
   StageSpectatorInfo,
 } from '../domain/rally'
 import { buildRouteNodes } from '../map/environmentNodes'
-import { fetchOpenMeteoForecast, type RouteEnvironmentSnapshot } from '../map/openMeteo'
+import type { RouteEnvironmentSnapshot } from '../map/openMeteo'
+import { fetchStageEnvironment, weatherModesComparable, type WeatherMode } from '../map/stageEnvironment'
 import { buildTemperatureDeltaProfile, compareRouteWeather } from '../map/weatherComparison'
 import { summarizeRouteWeather, type StageWeatherSummary } from '../map/weatherSummary'
 import { stageShareUrl } from '../navigation/stageRoute'
@@ -92,6 +93,14 @@ function formatSafetyOffset(offsetMinutes: number): string {
   return `${offsetMinutes < 0 ? 'T−' : 'T+'}${detail}`
 }
 
+function weatherFactLabel(status: EnvironmentStatus, mode: WeatherMode | null): string {
+  if (status === 'loading') return 'ACTUALIZANDO'
+  if (status === 'unavailable') return 'NO DISPONIBLE'
+  if (mode === 'historical-reference') return 'HISTORICAL REF'
+  if (mode === 'forecast') return 'FORECAST'
+  return 'PENDIENTE'
+}
+
 export function StageDetail({
   event,
   stage,
@@ -105,14 +114,24 @@ export function StageDetail({
   const [weatherSummary, setWeatherSummary] = useState<StageWeatherSummary>(emptyWeatherSummary)
   const [weatherStatus, setWeatherStatus] = useState<EnvironmentStatus>('idle')
   const [currentEnvironment, setCurrentEnvironment] = useState<RouteEnvironmentSnapshot[]>([])
+  const [currentWeatherMode, setCurrentWeatherMode] = useState<WeatherMode | null>(null)
+  const [currentWeatherSource, setCurrentWeatherSource] = useState<string | null>(null)
   const [otherEnvironment, setOtherEnvironment] = useState<RouteEnvironmentSnapshot[]>([])
+  const [otherWeatherMode, setOtherWeatherMode] = useState<WeatherMode | null>(null)
   const [otherWeatherStatus, setOtherWeatherStatus] = useState<EnvironmentStatus>('idle')
   const [simulationOpen, setSimulationOpen] = useState(false)
   const [shareState, setShareState] = useState<'idle' | 'shared' | 'copied' | 'unavailable'>('idle')
 
-  const handleEnvironmentChange = useCallback((snapshots: RouteEnvironmentSnapshot[], status: EnvironmentStatus) => {
+  const handleEnvironmentChange = useCallback((
+    snapshots: RouteEnvironmentSnapshot[],
+    status: EnvironmentStatus,
+    mode: WeatherMode | null = null,
+    sourceLabel?: string,
+  ) => {
     setWeatherStatus(status)
     setCurrentEnvironment(snapshots)
+    setCurrentWeatherMode(mode)
+    setCurrentWeatherSource(sourceLabel ?? null)
     setWeatherSummary(summarizeRouteWeather(snapshots))
   }, [])
 
@@ -126,6 +145,7 @@ export function StageDetail({
   useEffect(() => {
     if (!otherPass || !technicalStage?.geometry) {
       setOtherEnvironment([])
+      setOtherWeatherMode(null)
       setOtherWeatherStatus('idle')
       return
     }
@@ -133,17 +153,20 @@ export function StageDetail({
     const nodes = buildRouteNodes(technicalStage.geometry, 2.5)
     let cancelled = false
     setOtherEnvironment([])
+    setOtherWeatherMode(null)
     setOtherWeatherStatus('loading')
 
-    void fetchOpenMeteoForecast(nodes, otherPass.scheduledStart, event.timezone)
-      .then((snapshots) => {
+    void fetchStageEnvironment(nodes, otherPass.scheduledStart, event.timezone)
+      .then((dataset) => {
         if (cancelled) return
-        setOtherEnvironment(snapshots)
+        setOtherEnvironment(dataset.snapshots)
+        setOtherWeatherMode(dataset.mode)
         setOtherWeatherStatus('ready')
       })
       .catch(() => {
         if (cancelled) return
         setOtherEnvironment([])
+        setOtherWeatherMode(null)
         setOtherWeatherStatus('unavailable')
       })
 
@@ -152,8 +175,14 @@ export function StageDetail({
     }
   }, [event.timezone, otherPass, technicalStage?.geometry])
 
+  const modesComparable = Boolean(
+    currentWeatherMode
+    && otherWeatherMode
+    && weatherModesComparable(currentWeatherMode, otherWeatherMode),
+  )
+
   const passComparisonData = useMemo(() => {
-    if (!passPair || currentEnvironment.length === 0 || otherEnvironment.length === 0) return null
+    if (!passPair || !modesComparable || currentEnvironment.length === 0 || otherEnvironment.length === 0) return null
     const viewingFirstPass = stage.code === passPair.firstPass.code
     const firstPassEnvironment = viewingFirstPass ? currentEnvironment : otherEnvironment
     const secondPassEnvironment = viewingFirstPass ? otherEnvironment : currentEnvironment
@@ -162,18 +191,25 @@ export function StageDetail({
       view: presentPassComparison(compareRouteWeather(firstPassEnvironment, secondPassEnvironment)),
       temperatureProfile: buildTemperatureDeltaProfile(firstPassEnvironment, secondPassEnvironment),
     }
-  }, [currentEnvironment, otherEnvironment, passPair, stage.code])
+  }, [currentEnvironment, modesComparable, otherEnvironment, passPair, stage.code])
 
   const passComparisonView = passComparisonData?.view ?? null
   const temperatureProfile = passComparisonData?.temperatureProfile ?? []
+  const modesIncompatible = weatherStatus === 'ready'
+    && otherWeatherStatus === 'ready'
+    && currentWeatherMode !== null
+    && otherWeatherMode !== null
+    && !modesComparable
 
   const comparisonStatus = passComparisonView
     ? 'ready'
-    : weatherStatus === 'unavailable' || otherWeatherStatus === 'unavailable'
-      ? 'unavailable'
-      : weatherStatus === 'loading' || otherWeatherStatus === 'loading'
-        ? 'loading'
-        : 'idle'
+    : modesIncompatible
+      ? 'incompatible'
+      : weatherStatus === 'unavailable' || otherWeatherStatus === 'unavailable'
+        ? 'unavailable'
+        : weatherStatus === 'loading' || otherWeatherStatus === 'loading'
+          ? 'loading'
+          : 'idle'
 
   const startSlots = useMemo(() => {
     if (!run) return []
@@ -193,7 +229,7 @@ export function StageDetail({
     }))
   }, [event.timezone, spectator.safetyTrain, stage.scheduledStart])
 
-  const conditions = describeStageConditions(weatherSummary)
+  const conditions = describeStageConditions(weatherSummary, currentWeatherMode)
   const geometryStatus = technicalStage?.geometryStatus ?? 'pending-verification'
   const distance = presentStageDistance(stage.distanceKm, technicalStage?.distanceKm)
   const stageLabel = stage.name.replace(/\s+1$/, '')
@@ -261,7 +297,7 @@ export function StageDetail({
         </div>
         <div><span>PRIMER AUTO</span><strong>{formatClock(stage.scheduledStart, event.timezone)}</strong></div>
         <div><span>GEOMETRÍA</span><strong>{geometryStatus}</strong></div>
-        <div><span>CLIMA</span><strong>{weatherStatus === 'ready' ? 'MODELO DISPONIBLE' : weatherStatus === 'loading' ? 'ACTUALIZANDO' : 'PENDIENTE'}</strong></div>
+        <div><span>CLIMA</span><strong>{weatherFactLabel(weatherStatus, currentWeatherMode)}</strong></div>
       </section>
 
       <section className="weather-summary" aria-label="Resumen climático del tramo">
@@ -270,7 +306,7 @@ export function StageDetail({
             <p className="eyebrow">WEATHER ALONG STAGE</p>
             <h2 className="editorial-subtitle">Qué cambia de punta a punta.</h2>
           </div>
-          <p>Resumen derivado de los mismos nodos Open-Meteo que ves en el mapa. Modelo horario, no estaciones.</p>
+          <p>{currentWeatherSource ?? 'Resolviendo la mejor fuente meteorológica disponible…'} · mismos nodos del mapa; no son estaciones.</p>
         </div>
         <div className="weather-metrics">
           <article><span>TEMP</span><strong>{formatRange(weatherSummary.temperatureMinC, weatherSummary.temperatureMaxC, '°C')}</strong></article>
@@ -284,10 +320,18 @@ export function StageDetail({
         <section className="pass-comparison" aria-label={`Comparación meteorológica ${passPair.firstPass.code} contra ${passPair.secondPass.code}`}>
           <div className="section-heading">
             <div>
-              <p className="eyebrow">PASS 1 ↔ PASS 2 · MODELLED WEATHER</p>
+              <p className="eyebrow">PASS 1 ↔ PASS 2 · {currentWeatherMode === 'historical-reference' ? 'HISTORICAL REFERENCE' : 'MODELLED WEATHER'}</p>
               <h2 className="editorial-subtitle">Mismo camino. Otro horario.</h2>
             </div>
-            <p>{comparisonStatus === 'ready' ? 'Deltas calculados sobre los mismos nodos del recorrido.' : comparisonStatus === 'unavailable' ? 'No hay dos forecasts comparables disponibles ahora.' : 'Comparando los dos horarios planificados…'}</p>
+            <p>{
+              comparisonStatus === 'ready'
+                ? `Deltas calculados sobre los mismos nodos y el mismo tipo de evidencia (${currentWeatherMode === 'historical-reference' ? 'historical reference' : 'forecast'}).`
+                : comparisonStatus === 'incompatible'
+                  ? 'No hay dos estados meteorológicos comparables para estos horarios.'
+                  : comparisonStatus === 'unavailable'
+                    ? 'No hay dos fuentes meteorológicas comparables disponibles ahora.'
+                    : 'Comparando los dos horarios planificados…'
+            }</p>
           </div>
 
           <div className="pass-selector">
@@ -321,7 +365,7 @@ export function StageDetail({
             </div>
           ) : null}
 
-          <p className="panel-note">Δ = Pass 2 − Pass 1. Es una comparación de señal meteorológica modelada para dos horarios; no implica cambio observado de grip, barro, polvo ni estado de la calzada.</p>
+          <p className="panel-note">Δ = Pass 2 − Pass 1. Sólo se calcula cuando ambas pasadas usan el mismo tipo de evidencia meteorológica; no implica cambio observado de grip, barro, polvo ni estado de la calzada.</p>
         </section>
       ) : null}
 
@@ -332,14 +376,16 @@ export function StageDetail({
         spectator={spectator}
         scheduledStart={stage.scheduledStart}
         timezone={event.timezone}
+        distancePrimary={distance.primary}
+        distanceTechnical={distance.technical}
         simulationEnabled={simulationOpen}
         onEnvironmentChange={handleEnvironmentChange}
       />
 
       <section className="intelligence-grid">
         <article className="context-panel">
-          <p className="eyebrow">STAGE CONDITIONS · MODELLED CONTEXT</p>
-          <h2 className="editorial-subtitle">Lo que el modelo permite decir.</h2>
+          <p className="eyebrow">STAGE CONDITIONS · {currentWeatherMode === 'historical-reference' ? 'HISTORICAL REFERENCE' : currentWeatherMode === 'forecast' ? 'MODELLED FORECAST' : 'EVIDENCE PENDING'}</p>
+          <h2 className="editorial-subtitle">Lo que la evidencia permite decir.</h2>
           <ul className="signal-list">
             {conditions.map((condition) => <li key={condition}>{condition}</li>)}
           </ul>
