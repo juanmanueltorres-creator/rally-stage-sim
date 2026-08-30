@@ -2,14 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { GeoJSONSource, MapLayerMouseEvent } from 'maplibre-gl'
 import type { SimulatedStageRun, StageGeometryStatus, StageLineString, StageSpectatorInfo } from '../domain/rally'
+import { buildEnvironmentChips } from '../map/environmentChips'
 import { buildRouteNodes } from '../map/environmentNodes'
 import { presentEnvironmentSnapshot } from '../map/environmentView'
 import { MAP_STYLE } from '../map/mapStyle'
-import { fetchOpenMeteoForecast, type RouteEnvironmentSnapshot } from '../map/openMeteo'
-import { buildStageGeoJson } from '../map/stageGeoJson'
+import type { RouteEnvironmentSnapshot } from '../map/openMeteo'
+import { buildDirectionArrows, buildDistanceMarkers } from '../map/routeAnnotations'
+import { fetchStageEnvironment, type RouteEnvironmentDataset, type WeatherMode } from '../map/stageEnvironment'
+import { buildStageGeoJson, type StageMapAnnotations } from '../map/stageGeoJson'
 import { describeGeometryStatus } from '../presentation/geometryStatus'
 import { fleetSnapshot } from '../simulation/fleet'
 import { buildPlannedStartGrid } from '../simulation/startGrid'
+import { StageMapContextStrip } from './StageMapContextStrip'
 
 export type EnvironmentStatus = 'idle' | 'loading' | 'ready' | 'unavailable'
 
@@ -20,14 +24,42 @@ interface RallyMapProps {
   spectator?: StageSpectatorInfo
   scheduledStart: string
   timezone: string
+  distancePrimary?: string
+  distanceTechnical?: string | null
   simulationEnabled?: boolean
-  onEnvironmentChange?: (snapshots: RouteEnvironmentSnapshot[], status: EnvironmentStatus) => void
+  onEnvironmentChange?: (
+    snapshots: RouteEnvironmentSnapshot[],
+    status: EnvironmentStatus,
+    mode?: WeatherMode | null,
+    sourceLabel?: string,
+    methodologyNote?: string,
+  ) => void
 }
 
 function formatInterval(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
   const remaining = seconds - minutes * 60
   return `${minutes}:${String(remaining).padStart(2, '0')}`
+}
+
+function formatClock(iso: string, timezone: string): string {
+  return new Intl.DateTimeFormat('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: timezone,
+  }).format(new Date(iso))
+}
+
+function closureLabel(spectator: StageSpectatorInfo | undefined, timezone: string): string {
+  if (spectator?.roadClosureAt) return `${formatClock(spectator.roadClosureAt, timezone)} PREV`
+  if (spectator?.roadClosureText) return spectator.roadClosureText.toUpperCase()
+  return 'PENDING'
+}
+
+function publicAccessLabel(spectator: StageSpectatorInfo | undefined): string {
+  const spatialCount = (spectator?.spectatorZones.length ?? 0) + (spectator?.parking.length ?? 0)
+  return spatialCount > 0 ? 'OFFICIAL POINTS' : 'PENDING OFFICIAL POINTS'
 }
 
 function addSpectatorPopup(map: maplibregl.Map, layerId: string) {
@@ -74,6 +106,30 @@ function addSpectatorPopup(map: maplibregl.Map, layerId: string) {
   }
 }
 
+function createOverlayElement(className: string, text: string, rotationDeg?: number): HTMLDivElement {
+  const element = document.createElement('div')
+  element.className = className
+  const content = document.createElement('span')
+  content.textContent = text
+  if (rotationDeg !== undefined) content.style.transform = `rotate(${rotationDeg}deg)`
+  element.append(content)
+  return element
+}
+
+function addOverlayMarker(
+  map: maplibregl.Map,
+  coordinate: [number, number],
+  text: string,
+  className: string,
+  anchor: 'center' | 'top' | 'bottom' = 'center',
+  rotationDeg?: number,
+): maplibregl.Marker {
+  return new maplibregl.Marker({
+    element: createOverlayElement(className, text, rotationDeg),
+    anchor,
+  }).setLngLat(coordinate).addTo(map)
+}
+
 export function RallyMap({
   geometryStatus,
   geometry,
@@ -81,6 +137,8 @@ export function RallyMap({
   spectator,
   scheduledStart,
   timezone,
+  distancePrimary = '—',
+  distanceTechnical = null,
   simulationEnabled = true,
   onEnvironmentChange,
 }: RallyMapProps) {
@@ -95,38 +153,53 @@ export function RallyMap({
     spectatorZones: spectator?.spectatorZones ?? [],
     parking: spectator?.parking ?? [],
   }), [spectator?.parking, spectator?.spectatorZones])
-  const [environment, setEnvironment] = useState<RouteEnvironmentSnapshot[]>([])
+  const [environmentDataset, setEnvironmentDataset] = useState<RouteEnvironmentDataset | null>(null)
   const [environmentStatus, setEnvironmentStatus] = useState<EnvironmentStatus>('idle')
 
+  const environment = environmentDataset?.snapshots ?? []
   const environmentCards = useMemo(
     () => environment.map((snapshot) => ({ snapshot, view: presentEnvironmentSnapshot(snapshot) })),
     [environment],
   )
+  const mapAnnotations = useMemo<StageMapAnnotations>(() => ({
+    distanceMarkers: geometry ? buildDistanceMarkers(geometry, 5) : [],
+    directionArrows: geometry ? buildDirectionArrows(geometry, 5) : [],
+    environmentChips: environmentDataset
+      ? buildEnvironmentChips(environmentDataset.snapshots, environmentDataset.mode, 5)
+      : [],
+  }), [environmentDataset, geometry])
 
   useEffect(() => {
     if (!geometry || nodes.length === 0) {
-      setEnvironment([])
+      setEnvironmentDataset(null)
       setEnvironmentStatus('idle')
-      onEnvironmentChange?.([], 'idle')
+      onEnvironmentChange?.([], 'idle', null)
       return
     }
 
     let cancelled = false
+    setEnvironmentDataset(null)
     setEnvironmentStatus('loading')
-    onEnvironmentChange?.([], 'loading')
+    onEnvironmentChange?.([], 'loading', null)
 
-    void fetchOpenMeteoForecast(nodes, scheduledStart, timezone)
-      .then((snapshots) => {
+    void fetchStageEnvironment(nodes, scheduledStart, timezone)
+      .then((dataset) => {
         if (cancelled) return
-        setEnvironment(snapshots)
+        setEnvironmentDataset(dataset)
         setEnvironmentStatus('ready')
-        onEnvironmentChange?.(snapshots, 'ready')
+        onEnvironmentChange?.(
+          dataset.snapshots,
+          'ready',
+          dataset.mode,
+          dataset.sourceLabel,
+          dataset.methodologyNote,
+        )
       })
       .catch(() => {
         if (cancelled) return
-        setEnvironment([])
+        setEnvironmentDataset(null)
         setEnvironmentStatus('unavailable')
-        onEnvironmentChange?.([], 'unavailable')
+        onEnvironmentChange?.([], 'unavailable', null)
       })
 
     return () => {
@@ -149,6 +222,7 @@ export function RallyMap({
 
     let animationFrameId: number | null = null
     const removePopupHandlers: Array<() => void> = []
+    const overlayMarkers: maplibregl.Marker[] = []
 
     map.on('load', () => {
       if (!geometry) return
@@ -162,7 +236,7 @@ export function RallyMap({
 
       map.addSource('stage-context', {
         type: 'geojson',
-        data: buildStageGeoJson(geometry, initialFleet, geometryStatus, nodes, spectatorContext),
+        data: buildStageGeoJson(geometry, initialFleet, geometryStatus, nodes, spectatorContext, mapAnnotations),
       })
 
       map.addLayer({
@@ -245,6 +319,24 @@ export function RallyMap({
       removePopupHandlers.push(addSpectatorPopup(map, 'spectator-zones'))
       removePopupHandlers.push(addSpectatorPopup(map, 'spectator-parking'))
 
+      const startNode = nodes.find((node) => node.role === 'start')
+      const finishNode = nodes.find((node) => node.role === 'finish')
+      if (startNode) {
+        overlayMarkers.push(addOverlayMarker(map, startNode.coordinate, 'START', 'map-static-label map-static-label--start', 'bottom'))
+      }
+      if (finishNode) {
+        overlayMarkers.push(addOverlayMarker(map, finishNode.coordinate, 'FINISH', 'map-static-label map-static-label--finish', 'bottom'))
+      }
+      for (const marker of mapAnnotations.distanceMarkers) {
+        overlayMarkers.push(addOverlayMarker(map, marker.coordinate, marker.label, 'map-static-label map-static-label--distance', 'bottom'))
+      }
+      for (const arrow of mapAnnotations.directionArrows) {
+        overlayMarkers.push(addOverlayMarker(map, arrow.coordinate, '↑', 'map-direction-arrow', 'center', arrow.bearingDeg))
+      }
+      for (const chip of mapAnnotations.environmentChips) {
+        overlayMarkers.push(addOverlayMarker(map, chip.coordinate, chip.label, 'map-environment-chip', 'top'))
+      }
+
       if (simulationActive && run) {
         map.addLayer({
           id: 'simulated-vehicle',
@@ -302,7 +394,7 @@ export function RallyMap({
         const snapshots = fleetSnapshot(geometry, startGrid, stageStartMs, expectedDurationMs, virtualNowMs)
         const source = map.getSource('stage-context') as GeoJSONSource | undefined
 
-        source?.setData(buildStageGeoJson(geometry, snapshots, geometryStatus, nodes, spectatorContext))
+        source?.setData(buildStageGeoJson(geometry, snapshots, geometryStatus, nodes, spectatorContext, mapAnnotations))
 
         if (simulationRef.current) {
           const runningCount = snapshots.filter((snapshot) => snapshot.status === 'running').length
@@ -319,46 +411,59 @@ export function RallyMap({
     return () => {
       if (animationFrameId !== null) cancelAnimationFrame(animationFrameId)
       removePopupHandlers.forEach((remove) => remove())
+      overlayMarkers.forEach((marker) => marker.remove())
       map.remove()
     }
-  }, [geometry, geometryStatus, nodes, run, scheduledStart, simulationEnabled, spectatorContext, startGrid])
+  }, [geometry, geometryStatus, mapAnnotations, nodes, run, scheduledStart, simulationEnabled, spectatorContext, startGrid])
 
   return (
     <>
-      <section className="map-panel" aria-label="Mapa del tramo">
-        <div ref={containerRef} className="map-canvas" />
-        <div className="map-status" role="status">
-          <span className="status-dot" aria-hidden="true" />
-          <span>{describeGeometryStatus(geometryStatus, Boolean(geometry))}</span>
-          {geometry && run && simulationEnabled ? (
-            <span ref={simulationRef}>
-              {run.carCount} SIM {run.priority} · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×
-            </span>
-          ) : geometry ? <span>TRAMO + CONTEXTO AMBIENTAL</span> : null}
-          {spectatorContext.spectatorZones.length > 0 || spectatorContext.parking.length > 0 ? (
-            <span>{spectatorContext.spectatorZones.length} ZONA(S) · {spectatorContext.parking.length} PARKING</span>
-          ) : null}
+      <section className="map-intelligence-block" aria-label="Mapa e inteligencia visible del tramo">
+        <StageMapContextStrip
+          distancePrimary={distancePrimary}
+          distanceTechnical={distanceTechnical}
+          startTime={formatClock(scheduledStart, timezone)}
+          geometryStatus={geometryStatus}
+          weatherStatus={environmentStatus}
+          weatherMode={environmentDataset?.mode ?? null}
+          closure={closureLabel(spectator, timezone)}
+          publicAccess={publicAccessLabel(spectator)}
+        />
+        <div className="map-panel" aria-label="Mapa del tramo">
+          <div ref={containerRef} className="map-canvas" />
+          <div className="map-status" role="status">
+            <span className="status-dot" aria-hidden="true" />
+            <span>{describeGeometryStatus(geometryStatus, Boolean(geometry))}</span>
+            {geometry && run && simulationEnabled ? (
+              <span ref={simulationRef}>
+                {run.carCount} SIM {run.priority} · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×
+              </span>
+            ) : geometry ? <span>TRAMO + CONTEXTO AMBIENTAL</span> : null}
+            {spectatorContext.spectatorZones.length > 0 || spectatorContext.parking.length > 0 ? (
+              <span>{spectatorContext.spectatorZones.length} ZONA(S) · {spectatorContext.parking.length} PARKING</span>
+            ) : null}
+          </div>
         </div>
       </section>
 
-      <section className="environment-panel" aria-label="Contexto ambiental modelado a lo largo del tramo">
+      <section className="environment-panel" aria-label="Contexto ambiental a lo largo del tramo">
         <div className="environment-header">
           <div>
-            <p className="eyebrow">CLIMA A LO LARGO DEL TRAMO · OPEN-METEO</p>
+            <p className="eyebrow">CLIMA A LO LARGO DEL TRAMO · {environmentDataset?.sourceLabel ?? 'OPEN-METEO'}</p>
             <h2>START → nodos cada 2,5 km → FINISH</h2>
           </div>
           <p>
-            Muestreo espacial sobre la geometría de referencia. Son valores modelados, no observaciones de estación ni una afirmación de resolución meteorológica de 2,5 km.
+            Muestreo espacial sobre la geometría de referencia. Los valores son contexto meteorológico, no una afirmación de resolución de 2,5 km ni una lectura del estado real del camino.
           </p>
         </div>
 
         {environmentStatus === 'loading' ? (
-          <p className="environment-state">Buscando el pronóstico para la hora prevista del tramo…</p>
+          <p className="environment-state">Resolviendo forecast y, si hace falta, referencia histórica…</p>
         ) : null}
 
         {environmentStatus === 'unavailable' ? (
           <p className="environment-state environment-state--warning">
-            El pronóstico está fuera del horizonte disponible o temporalmente inaccesible. El recorrido y los nodos siguen siendo válidos.
+            No se pudo cargar forecast ni referencia histórica. El recorrido y sus referencias espaciales siguen siendo válidos.
           </p>
         ) : null}
 
@@ -385,8 +490,12 @@ export function RallyMap({
           </div>
         ) : null}
 
+        {environmentDataset?.methodologyNote ? (
+          <p className="environment-mode-note">{environmentDataset.methodologyNote}</p>
+        ) : null}
+
         <p className="environment-source">
-          Fuente: <a href="https://open-meteo.com/en/docs" target="_blank" rel="noreferrer">Open-Meteo Weather Forecast API</a> · consulta en {timezone} para la hora prevista del tramo.
+          Fuente activa: {environmentDataset?.sourceLabel ?? 'WEATHER PENDING'} · consulta en {timezone} para la hora local prevista del tramo.
         </p>
       </section>
     </>
