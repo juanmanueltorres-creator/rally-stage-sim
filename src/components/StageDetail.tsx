@@ -22,6 +22,7 @@ import {
 import { presentStageDistance } from '../presentation/stageDistance'
 import { describeStageConditions } from '../presentation/stageExperience'
 import { buildPlannedStartGrid } from '../simulation/startGrid'
+import { PassTimeRail } from './PassTimeRail'
 import { RallyMap, type EnvironmentStatus } from './RallyMap'
 import { StageCommandBar } from './StageCommandBar'
 import { TemperatureDeltaProfile } from './TemperatureDeltaProfile'
@@ -347,19 +348,21 @@ export function StageDetail({
             }</p>
           </div>
 
-          <div className="pass-selector">
-            <a className={`pass-card${stage.code === passPair.firstPass.code ? ' pass-card--active' : ''}`} href={`#/${event.id}/${passPair.firstPass.slug}`}>
-              <span>PASS 1 · {passPair.firstPass.code}</span>
-              <strong>{formatClock(passPair.firstPass.scheduledStart, event.timezone)}</strong>
-              <small>{passPair.firstPass.name}</small>
-            </a>
-            <span className="pass-arrow" aria-hidden="true">→</span>
-            <a className={`pass-card${stage.code === passPair.secondPass.code ? ' pass-card--active' : ''}`} href={`#/${event.id}/${passPair.secondPass.slug}`}>
-              <span>PASS 2 · {passPair.secondPass.code}</span>
-              <strong>{formatClock(passPair.secondPass.scheduledStart, event.timezone)}</strong>
-              <small>{passPair.secondPass.name}</small>
-            </a>
-          </div>
+          <PassTimeRail
+            activeCode={stage.code}
+            first={{
+              code: passPair.firstPass.code,
+              name: passPair.firstPass.name,
+              time: formatClock(passPair.firstPass.scheduledStart, event.timezone),
+              href: `#/${event.id}/${passPair.firstPass.slug}`,
+            }}
+            second={{
+              code: passPair.secondPass.code,
+              name: passPair.secondPass.name,
+              time: formatClock(passPair.secondPass.scheduledStart, event.timezone),
+              href: `#/${event.id}/${passPair.secondPass.slug}`,
+            }}
+          />
 
           <div className="pass-comparison-metrics">
             <article><span>MEAN TEMP Δ</span><strong>{passComparisonView?.temperature ?? '—'}</strong></article>
