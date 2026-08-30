@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import type { SpectatorPoint, StageLineString } from '../domain/rally.ts'
 import type { RouteNode } from './environmentNodes.ts'
-import { buildStageGeoJson } from './stageGeoJson.ts'
+import type { RouteDirectionArrow, RouteDistanceMarker } from './routeAnnotations.ts'
+import { buildStageGeoJson, type StageMapEnvironmentChip } from './stageGeoJson.ts'
 
 const line: StageLineString = {
   type: 'LineString',
@@ -50,14 +51,35 @@ const parking: SpectatorPoint[] = [
   },
 ]
 
-test('buildStageGeoJson returns route, simulated cars, environmental nodes and sourced spectator points', () => {
-  const geojson = buildStageGeoJson(line, vehicles, 'reconstructed', nodes, {
-    spectatorZones,
-    parking,
-  })
+const distanceMarkers: RouteDistanceMarker[] = [
+  { distanceKm: 5, label: 'KM 5', coordinate: [-72.708, -37.234] },
+]
+
+const directionArrows: RouteDirectionArrow[] = [
+  { coordinate: [-72.706, -37.232], bearingDeg: 42 },
+]
+
+const environmentChips: StageMapEnvironmentChip[] = [
+  {
+    nodeId: 'km-2.5',
+    coordinate: [-72.71, -37.235],
+    label: 'KM 2.5 · 14 °C',
+    weatherMode: 'forecast',
+  },
+]
+
+test('buildStageGeoJson returns route, cars, nodes, sourced spectator points and default-visible annotations', () => {
+  const geojson = buildStageGeoJson(
+    line,
+    vehicles,
+    'reconstructed',
+    nodes,
+    { spectatorZones, parking },
+    { distanceMarkers, directionArrows, environmentChips },
+  )
 
   assert.equal(geojson.type, 'FeatureCollection')
-  assert.equal(geojson.features.length, 8)
+  assert.equal(geojson.features.length, 11)
   assert.equal(geojson.features[0].geometry.type, 'LineString')
   assert.deepEqual(geojson.features[0].geometry.coordinates, line.coordinates)
   assert.equal(geojson.features[0].properties.kind, 'stage-route')
@@ -68,8 +90,7 @@ test('buildStageGeoJson returns route, simulated cars, environmental nodes and s
   assert.equal(sim01?.properties.status, 'running')
   assert.equal(sim01?.properties.progress, 0.5)
 
-  const environmentNode = geojson.features.find((feature) => feature.properties.nodeId === 'km-2.5')
-  assert.equal(environmentNode?.properties.kind, 'environment-node')
+  const environmentNode = geojson.features.find((feature) => feature.properties.nodeId === 'km-2.5' && feature.properties.kind === 'environment-node')
   assert.equal(environmentNode?.properties.distanceKm, 2.5)
 
   const zone = geojson.features.find((feature) => feature.properties.spectatorId === 'zone-a')
@@ -81,4 +102,15 @@ test('buildStageGeoJson returns route, simulated cars, environmental nodes and s
   const parkingPoint = geojson.features.find((feature) => feature.properties.spectatorId === 'parking-a')
   assert.equal(parkingPoint?.properties.kind, 'spectator-parking')
   assert.equal(parkingPoint?.properties.label, 'Parking A')
+
+  const distanceMarker = geojson.features.find((feature) => feature.properties.kind === 'distance-marker')
+  assert.equal(distanceMarker?.properties.label, 'KM 5')
+  assert.equal(distanceMarker?.properties.distanceKm, 5)
+
+  const arrow = geojson.features.find((feature) => feature.properties.kind === 'direction-arrow')
+  assert.equal(arrow?.properties.bearingDeg, 42)
+
+  const chip = geojson.features.find((feature) => feature.properties.kind === 'environment-chip')
+  assert.equal(chip?.properties.label, 'KM 2.5 · 14 °C')
+  assert.equal(chip?.properties.weatherMode, 'forecast')
 })
