@@ -13,6 +13,7 @@ import { buildStageGeoJson, type StageMapAnnotations } from '../map/stageGeoJson
 import { describeGeometryStatus } from '../presentation/geometryStatus'
 import { fleetSnapshot } from '../simulation/fleet'
 import { buildPlannedStartGrid } from '../simulation/startGrid'
+import { StageDisclosure } from './StageDisclosure'
 
 export type EnvironmentStatus = 'idle' | 'loading' | 'ready' | 'unavailable'
 
@@ -37,15 +38,6 @@ function formatInterval(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
   const remaining = seconds - minutes * 60
   return `${minutes}:${String(remaining).padStart(2, '0')}`
-}
-
-function formatClock(iso: string, timezone: string): string {
-  return new Intl.DateTimeFormat('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: timezone,
-  }).format(new Date(iso))
 }
 
 function isSpatiallySourced(point: SpectatorPoint): point is SpectatorPoint & { coordinate: [number, number] } {
@@ -393,40 +385,46 @@ export function RallyMap({
         </div>
       </section>
 
-      <section className="environment-panel" aria-label="Contexto ambiental a lo largo del tramo">
-        <div className="environment-header">
-          <div>
-            <p className="eyebrow">CLIMA A LO LARGO DEL TRAMO · {environmentDataset?.sourceLabel ?? 'OPEN-METEO'}</p>
-            <h2>START → nodos cada 2,5 km → FINISH</h2>
+      <StageDisclosure
+        id="stage-weather-detail"
+        label="WEATHER ALONG STAGE"
+        meta={environmentDataset?.sourceLabel ?? 'WEATHER PENDING'}
+      >
+        <section className="environment-panel" aria-label="Contexto ambiental a lo largo del tramo">
+          <div className="environment-header">
+            <div>
+              <p className="eyebrow">CLIMA A LO LARGO DEL TRAMO · {environmentDataset?.sourceLabel ?? 'OPEN-METEO'}</p>
+              <h2>START → nodos cada 2,5 km → FINISH</h2>
+            </div>
+            <p>Muestreo espacial sobre la geometría de referencia. Los valores son contexto meteorológico, no una afirmación de resolución de 2,5 km ni una lectura del estado real del camino.</p>
           </div>
-          <p>Muestreo espacial sobre la geometría de referencia. Los valores son contexto meteorológico, no una afirmación de resolución de 2,5 km ni una lectura del estado real del camino.</p>
-        </div>
 
-        {environmentStatus === 'loading' ? <p className="environment-state">Resolviendo forecast y, si hace falta, referencia histórica…</p> : null}
-        {environmentStatus === 'unavailable' ? (
-          <p className="environment-state environment-state--warning">No se pudo cargar forecast ni referencia histórica. El recorrido y sus referencias espaciales siguen siendo válidos.</p>
-        ) : null}
+          {environmentStatus === 'loading' ? <p className="environment-state">Resolviendo forecast y, si hace falta, referencia histórica…</p> : null}
+          {environmentStatus === 'unavailable' ? (
+            <p className="environment-state environment-state--warning">No se pudo cargar forecast ni referencia histórica. El recorrido y sus referencias espaciales siguen siendo válidos.</p>
+          ) : null}
 
-        {environmentStatus === 'ready' ? (
-          <div className="environment-grid">
-            {environmentCards.map(({ snapshot, view }) => (
-              <article className={`environment-node-card${snapshot.node.role !== 'context' ? ' environment-node-card--terminal' : ''}`} key={snapshot.node.id}>
-                <div className="environment-node-heading"><strong>{view.position}</strong><span>{view.validAt}</span></div>
-                <div className="environment-node-values">
-                  <div><span>TEMP</span><strong>{view.temperature}</strong></div>
-                  <div><span>VIENTO</span><strong>{view.wind}</strong></div>
-                  <div><span>RÁFAGA</span><strong>{view.gust}</strong></div>
-                  <div><span>ELEV</span><strong>{view.elevation}</strong></div>
-                  <div><span>PRECIP</span><strong>{view.precipitation}</strong></div>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : null}
+          {environmentStatus === 'ready' ? (
+            <div className="environment-grid">
+              {environmentCards.map(({ snapshot, view }) => (
+                <article className={`environment-node-card${snapshot.node.role !== 'context' ? ' environment-node-card--terminal' : ''}`} key={snapshot.node.id}>
+                  <div className="environment-node-heading"><strong>{view.position}</strong><span>{view.validAt}</span></div>
+                  <div className="environment-node-values">
+                    <div><span>TEMP</span><strong>{view.temperature}</strong></div>
+                    <div><span>VIENTO</span><strong>{view.wind}</strong></div>
+                    <div><span>RÁFAGA</span><strong>{view.gust}</strong></div>
+                    <div><span>ELEV</span><strong>{view.elevation}</strong></div>
+                    <div><span>PRECIP</span><strong>{view.precipitation}</strong></div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
 
-        {environmentDataset?.methodologyNote ? <p className="environment-mode-note">{environmentDataset.methodologyNote}</p> : null}
-        <p className="environment-source">Fuente activa: {environmentDataset?.sourceLabel ?? 'WEATHER PENDING'} · consulta en {timezone} para la hora local prevista del tramo.</p>
-      </section>
+          {environmentDataset?.methodologyNote ? <p className="environment-mode-note">{environmentDataset.methodologyNote}</p> : null}
+          <p className="environment-source">Fuente activa: {environmentDataset?.sourceLabel ?? 'WEATHER PENDING'} · consulta en {timezone} para la hora local prevista del tramo.</p>
+        </section>
+      </StageDisclosure>
     </>
   )
 }
