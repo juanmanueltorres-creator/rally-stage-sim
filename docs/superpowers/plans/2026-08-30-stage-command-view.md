@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Recompose the existing Rally Chile stage detail into a presentation-ready, map-first Stage Command View with compact status, clear Pass 1 ↔ Pass 2 time comparison, progressive disclosure, and restrained micro-motion while preserving all current domain behavior.
+**Goal:** Recompose the existing Rally Chile stage detail into a presentation-ready, map-first Stage Command View with compact status, a clearer Pass 1 ↔ Pass 2 time comparison, progressive disclosure, and restrained micro-motion while preserving all current domain behavior.
 
-**Architecture:** Keep the existing weather, geometry, simulation, provenance and MapLibre data flows unchanged. Move only presentation responsibilities: derive display-only operational labels in a small pure helper, render them through one `StageCommandBar`, make `RallyMap` map-only, introduce focused `PassTimeRail` and `StageDisclosure` components, and isolate the new visual system in a dedicated stylesheet. `motion/mini` is the only new runtime UI dependency.
+**Architecture:** Keep the existing weather, geometry, simulation, provenance and MapLibre data flows unchanged. Move only display responsibilities: derive operational labels in a small pure helper, replace duplicate status rows with one `StageCommandBar`, reorder the existing stage page around the map, add focused `PassTimeRail` and `StageDisclosure` components, and isolate the new visual system in a dedicated stylesheet. `motion/mini` is the only new runtime UI dependency.
 
 **Tech Stack:** React 19, TypeScript, Vite, MapLibre GL 6, Turf 7, Open-Meteo, `motion/mini`, Node built-in test runner.
 
@@ -28,6 +28,7 @@
 - Respect `prefers-reduced-motion`; reduced-motion mode must remain fully usable.
 - No horizontal scrolling on mobile.
 - Keep the current MapLibre worker safeguards in `vite.config.ts` and `src/main.tsx`.
+- Preserve the repository's current package-management pattern; do not introduce a lockfile if the repository intentionally has none.
 - Every task must leave `npm test` green before commit; run `npm run build` at each layout/integration checkpoint.
 
 ---
@@ -36,28 +37,28 @@
 
 ### New files
 
-- `src/presentation/stageCommandView.ts` — pure display helpers for weather, closure and public-access labels.
-- `src/presentation/stageCommandView.test.ts` — contract tests for those labels and evidence wording.
+- `src/presentation/stageCommandView.ts` — pure weather/closure/public-access display labels.
+- `src/presentation/stageCommandView.test.ts` — tests for those labels and evidence wording.
 - `src/presentation/passRail.ts` — pure active-pass position helper.
-- `src/presentation/passRail.test.ts` — pass-rail behavior tests.
-- `src/presentation/uiMotion.ts` — reduced-motion detection and duration helper used by Motion calls.
-- `src/presentation/uiMotion.test.ts` — deterministic tests for reduced-motion behavior.
+- `src/presentation/passRail.test.ts` — pass-rail tests.
+- `src/presentation/uiMotion.ts` — reduced-motion detection and duration helper.
+- `src/presentation/uiMotion.test.ts` — deterministic motion-preference tests.
 - `src/components/StageCommandBar.tsx` — display-only compact status row.
 - `src/components/PassTimeRail.tsx` — visual first-pass/second-pass time rail.
-- `src/components/StageDisclosure.tsx` — accessible controlled disclosure with lightweight transition.
-- `src/stageCommandView.css` — Stage Command View layout, command bar, disclosures and map-first presentation.
+- `src/components/StageDisclosure.tsx` — accessible controlled disclosure.
+- `src/stageCommandView.css` — command-view layout, status bar, disclosures and map-first presentation.
 
 ### Existing files modified
 
-- `src/components/StageDetail.tsx` — recompose existing sections into the new hierarchy; do not change data calculations.
-- `src/components/RallyMap.tsx` — remove duplicate context strip and detailed weather-card rendering; keep map/data behavior.
+- `src/components/StageDetail.tsx` — recompose existing sections; no data-calculation changes.
+- `src/components/RallyMap.tsx` — remove the duplicate context strip and wrap its existing detailed weather panel in progressive disclosure; keep weather/map ownership intact.
 - `src/components/StageMapContextStrip.tsx` — delete after command bar replaces it.
-- `src/passComparison.css` — replace the two-card selector with the compact time rail while preserving metrics/profile.
-- `src/mapIntelligence.css` — remove obsolete `.stage-map-context-strip` rules only; keep map marker/chip styles.
+- `src/passComparison.css` — replace two large pass cards with the time rail while preserving metrics/profile.
+- `src/mapIntelligence.css` — remove obsolete context-strip rules only; keep map markers/chips.
 - `src/main.tsx` — import `stageCommandView.css`.
-- `src/styles.css` — small cleanup/overrides for map height, compact hero and existing section compatibility.
-- `package.json` and lockfile if present — add `motion` only.
-- `README.md` — add one short note that the stage detail is map-first and deeper panels are collapsible; do not expand the README again.
+- `src/styles.css` — minimal compatibility/presentation adjustments.
+- `package.json` — add `motion` only.
+- `README.md` — one compact note describing map-first layout and collapsible detail.
 
 ---
 
@@ -73,14 +74,14 @@
 - Modify: `src/mapIntelligence.css`
 
 **Interfaces:**
-- Consumes: `StageSpectatorInfo`, `EnvironmentStatus`, `WeatherMode`, explicit display strings already available in `StageDetail`.
 - Produces:
-  - `presentCommandWeather(status: EnvironmentStatus, mode: WeatherMode | null): string`
-  - `presentCommandClosure(spectator: StageSpectatorInfo | undefined, timezone: string): string`
-  - `presentCommandPublicAccess(spectator: StageSpectatorInfo | undefined): string`
-  - `StageCommandBar` with explicit display-value props only.
+  - `StageCommandWeatherStatus = 'idle' | 'loading' | 'ready' | 'unavailable'`
+  - `presentCommandWeather(status, mode): string`
+  - `presentCommandClosure(spectator, timezone): string`
+  - `presentCommandPublicAccess(spectator): string`
+  - `StageCommandBar` with explicit display strings only.
 
-- [ ] **Step 1: Write RED tests for command-view labels**
+- [ ] **Step 1: Write RED tests for the display labels**
 
 Create `src/presentation/stageCommandView.test.ts`:
 
@@ -96,14 +97,16 @@ import {
 
 function spectator(overrides: Partial<StageSpectatorInfo> = {}): StageSpectatorInfo {
   return {
-    status: 'pending',
+    stageId: 'stage-1',
+    accessStatus: 'pending',
     spectatorZones: [],
     parking: [],
     accessPoints: [],
     noSpectatorZones: [],
-    provenance: { sources: [] },
+    services: [],
+    provenance: { state: 'planned', sources: [] },
     ...overrides,
-  } as StageSpectatorInfo
+  }
 }
 
 test('presentCommandWeather keeps forecast and historical reference explicit', () => {
@@ -113,7 +116,7 @@ test('presentCommandWeather keeps forecast and historical reference explicit', (
   assert.equal(presentCommandWeather('unavailable', null), 'WEATHER UNAVAILABLE')
 })
 
-test('presentCommandClosure formats a sourced closure time in the event timezone', () => {
+test('presentCommandClosure formats closure time in the event timezone', () => {
   assert.equal(
     presentCommandClosure(
       spectator({ roadClosureAt: '2026-09-10T20:00:00-03:00' }),
@@ -123,25 +126,27 @@ test('presentCommandClosure formats a sourced closure time in the event timezone
   )
 })
 
-test('presentCommandPublicAccess only reports official points when a public point has source and coordinate', () => {
+test('presentCommandPublicAccess requires both coordinate and provenance', () => {
   assert.equal(presentCommandPublicAccess(spectator()), 'PENDING OFFICIAL POINTS')
 
-  const withOfficialAccess = spectator({
-    accessPoints: [{
-      id: 'official-access-1',
-      label: 'Acceso oficial',
-      coordinate: [-72.7, -37.2],
-      provenance: {
-        sources: [{
-          label: 'Organizer map',
-          url: 'https://example.com/map',
-          accessedAt: '2026-08-30',
-        }],
-      },
-    }],
-  })
-
-  assert.equal(presentCommandPublicAccess(withOfficialAccess), 'OFFICIAL POINTS')
+  assert.equal(
+    presentCommandPublicAccess(spectator({
+      accessPoints: [{
+        id: 'official-access-1',
+        label: 'Acceso oficial',
+        coordinate: [-72.7, -37.2],
+        provenance: {
+          state: 'planned',
+          sources: [{
+            label: 'Organizer map',
+            url: 'https://example.com/map',
+            accessedAt: '2026-08-30',
+          }],
+        },
+      }],
+    })),
+    'OFFICIAL POINTS',
+  )
 })
 ```
 
@@ -155,14 +160,15 @@ npm test -- src/presentation/stageCommandView.test.ts
 
 Expected: FAIL because `stageCommandView.ts` does not exist.
 
-- [ ] **Step 3: Implement the pure presentation helpers**
+- [ ] **Step 3: Implement the pure presentation helper**
 
 Create `src/presentation/stageCommandView.ts`:
 
 ```ts
 import type { StageSpectatorInfo } from '../domain/rally.ts'
 import type { WeatherMode } from '../map/stageEnvironment.ts'
-import type { EnvironmentStatus } from '../components/RallyMap.tsx'
+
+export type StageCommandWeatherStatus = 'idle' | 'loading' | 'ready' | 'unavailable'
 
 function formatClock(iso: string, timezone: string): string {
   return new Intl.DateTimeFormat('es-AR', {
@@ -174,13 +180,16 @@ function formatClock(iso: string, timezone: string): string {
 }
 
 function hasSpatialSource(point: {
-  coordinate?: [number, number] | null
-  provenance?: { sources?: unknown[] } | null
+  coordinate?: [number, number]
+  provenance?: { sources: unknown[] }
 }): boolean {
-  return Boolean(point.coordinate && point.provenance?.sources && point.provenance.sources.length > 0)
+  return Boolean(point.coordinate && point.provenance?.sources.length)
 }
 
-export function presentCommandWeather(status: EnvironmentStatus, mode: WeatherMode | null): string {
+export function presentCommandWeather(
+  status: StageCommandWeatherStatus,
+  mode: WeatherMode | null,
+): string {
   if (status === 'loading') return 'RESOLVING WEATHER'
   if (status === 'unavailable') return 'WEATHER UNAVAILABLE'
   if (mode === 'historical-reference') return 'HISTORICAL REF · 2021–2025'
@@ -207,8 +216,6 @@ export function presentCommandPublicAccess(spectator: StageSpectatorInfo | undef
 }
 ```
 
-If the exact `StageSpectatorInfo` point/provenance type shape differs from the structural helper above, use the repository's actual point type while preserving the same rule: coordinate **and** at least one provenance source are required.
-
 - [ ] **Step 4: Run the focused test and verify GREEN**
 
 Run:
@@ -219,7 +226,7 @@ npm test -- src/presentation/stageCommandView.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 5: Add the display-only command bar component**
+- [ ] **Step 5: Create the display-only command bar**
 
 Create `src/components/StageCommandBar.tsx`:
 
@@ -256,9 +263,9 @@ export function StageCommandBar({
 }
 ```
 
-No fetches, `useEffect`, domain calculations or provenance logic belong in this component.
+This component must contain no fetch, `useEffect`, geometry logic or provenance logic.
 
-- [ ] **Step 6: Integrate the command bar and remove the duplicate map strip**
+- [ ] **Step 6: Integrate one status surface and remove the duplicate strip**
 
 In `StageDetail.tsx`:
 
@@ -271,7 +278,7 @@ import {
 } from '../presentation/stageCommandView'
 ```
 
-Derive display values next to the existing `distance`, `geometryStatus` and weather state:
+Near the existing `distance` and `geometryStatus` values:
 
 ```ts
 const commandWeather = presentCommandWeather(weatherStatus, currentWeatherMode)
@@ -279,7 +286,7 @@ const commandClosure = presentCommandClosure(spectator, event.timezone)
 const commandPublicAccess = presentCommandPublicAccess(spectator)
 ```
 
-Replace the old `.stage-facts` row with:
+Replace the old `.stage-facts` block with:
 
 ```tsx
 <StageCommandBar
@@ -295,30 +302,29 @@ Replace the old `.stage-facts` row with:
 
 In `RallyMap.tsx`:
 
-- remove the `StageMapContextStrip` import and render;
-- remove `distancePrimary` and `distanceTechnical` props if they are now unused;
-- keep `scheduledStart`, `timezone`, `spectator`, environment loading, annotations and simulation unchanged;
-- keep `isSpatiallySourced` for map-point rendering/popup safety.
+- remove `StageMapContextStrip` import and JSX;
+- remove `distancePrimary` / `distanceTechnical` props when no longer used;
+- remove local `closureLabel` and `publicAccessLabel` helpers when no longer used;
+- keep `isSpatiallySourced`, `formatClock`, environment loading, annotations, map sources/layers and simulation unchanged.
 
 Delete `src/components/StageMapContextStrip.tsx`.
 
-Remove only `.stage-map-context-strip...` selectors from `src/mapIntelligence.css`; keep map labels, chips, arrows and official-point styles untouched.
+Remove only `.stage-map-context-strip...` selectors from `src/mapIntelligence.css`.
 
-- [ ] **Step 7: Run full tests and build**
-
-Run:
+- [ ] **Step 7: Run full tests/build**
 
 ```bash
 npm test
 npm run build
 ```
 
-Expected: 70 existing tests + the new command-view tests pass; TypeScript and Vite build pass.
+Expected: all existing 70 tests plus the new command-view tests pass; TypeScript/Vite build passes.
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/presentation/stageCommandView.ts src/presentation/stageCommandView.test.ts src/components/StageCommandBar.tsx src/components/StageDetail.tsx src/components/RallyMap.tsx src/mapIntelligence.css src/components/StageMapContextStrip.tsx
+git add src/presentation/stageCommandView.ts src/presentation/stageCommandView.test.ts src/components/StageCommandBar.tsx src/components/StageDetail.tsx src/components/RallyMap.tsx src/mapIntelligence.css
+git rm src/components/StageMapContextStrip.tsx
 git commit -m "feat: unify stage command status"
 ```
 
@@ -327,18 +333,17 @@ git commit -m "feat: unify stage command status"
 ### Task 2: Make the map the primary stage surface
 
 **Files:**
+- Create: `src/presentation/stageCommandLayout.test.ts`
 - Modify: `src/components/StageDetail.tsx`
-- Modify: `src/components/RallyMap.tsx`
 - Create: `src/stageCommandView.css`
 - Modify: `src/main.tsx`
 - Modify: `src/styles.css`
 
 **Interfaces:**
-- Consumes: the existing `RallyMap` callback and stage/weather state.
-- Produces: the new stage-page order `hero → command bar → large map → pass comparison → concise intelligence → optional detail`.
-- No new domain APIs.
+- Produces the page order: `hero → command bar → large map → pass comparison → concise conditions/access → optional detail`.
+- No new domain API.
 
-- [ ] **Step 1: Add a source-contract test for the map-first order**
+- [ ] **Step 1: Write a RED structural regression test**
 
 Create `src/presentation/stageCommandLayout.test.ts`:
 
@@ -349,7 +354,7 @@ import { readFileSync } from 'node:fs'
 
 const source = readFileSync(new URL('../components/StageDetail.tsx', import.meta.url), 'utf8')
 
-test('StageDetail renders command bar before RallyMap and RallyMap before pass comparison', () => {
+test('StageDetail keeps command bar before map and map before pass comparison', () => {
   const command = source.indexOf('<StageCommandBar')
   const map = source.indexOf('<RallyMap')
   const pass = source.indexOf('className="pass-comparison"')
@@ -360,29 +365,21 @@ test('StageDetail renders command bar before RallyMap and RallyMap before pass c
 })
 ```
 
-This is intentionally a narrow structural regression test; it protects the presentation hierarchy without introducing a React test framework.
-
-- [ ] **Step 2: Run the focused layout test and verify RED**
-
-Run:
+- [ ] **Step 2: Run it and verify RED**
 
 ```bash
 npm test -- src/presentation/stageCommandLayout.test.ts
 ```
 
-Expected: FAIL because the current `RallyMap` still appears below weather/pass sections.
+Expected: FAIL because the current map still renders below the weather/pass blocks.
 
-- [ ] **Step 3: Reorder `StageDetail` without changing calculations**
+- [ ] **Step 3: Reorder existing JSX only**
 
-Move the existing `RallyMap` JSX so it renders immediately after `StageCommandBar`.
-
-Target skeleton:
+Move the existing `RallyMap` call immediately after `StageCommandBar`:
 
 ```tsx
 <header className="stage-hero stage-command-hero">...</header>
-
 <StageCommandBar ... />
-
 <section className="stage-map-primary" aria-label="Mapa principal del tramo">
   <RallyMap
     geometryStatus={geometryStatus}
@@ -395,21 +392,14 @@ Target skeleton:
     onEnvironmentChange={handleEnvironmentChange}
   />
 </section>
-
 {passPair ? <section className="pass-comparison">...</section> : null}
-
-<div className="intelligence-grid">...</div>
 ```
 
-Do not move or rewrite the existing state hooks, weather fetch, pass-comparison calculation, safety timeline calculation or source aggregation.
+Do not move/rewrite the hooks or calculations that produce `weatherSummary`, `passComparisonData`, `safetyTimeline`, `startSlots`, `conditions` or `sources`.
 
-- [ ] **Step 4: Make `RallyMap` map-only at the top level**
+- [ ] **Step 4: Add isolated command-view CSS**
 
-`RallyMap` should return the map panel and its map status/attribution UI, but the detailed environment-node grid will be moved to Task 4. At this task, keep the detailed environment grid in place if removing it would create a larger diff; the important checkpoint is that the map canvas itself is now high in the page and the old duplicate strip is gone.
-
-- [ ] **Step 5: Add isolated Stage Command View CSS**
-
-Create `src/stageCommandView.css` with the first-pass layout:
+Create `src/stageCommandView.css`:
 
 ```css
 .stage-command-hero {
@@ -457,13 +447,8 @@ Create `src/stageCommandView.css` with the first-pass layout:
   letter-spacing: 0.03em;
 }
 
-.stage-map-primary {
-  margin-bottom: 10px;
-}
-
-.stage-map-primary .map-canvas {
-  height: clamp(500px, 66vh, 760px);
-}
+.stage-map-primary { margin-bottom: 10px; }
+.stage-map-primary .map-canvas { height: clamp(500px, 66vh, 760px); }
 
 @media (max-width: 900px) {
   .stage-command-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -476,7 +461,7 @@ Create `src/stageCommandView.css` with the first-pass layout:
 }
 ```
 
-Import it in `src/main.tsx` after `styles.css` and before the more specific map/pass styles:
+Import it in `src/main.tsx`:
 
 ```ts
 import './styles.css'
@@ -486,11 +471,9 @@ import './passComparison.css'
 import './mapIntelligence.css'
 ```
 
-In `styles.css`, remove or neutralize only selectors that conflict with the new map height/order. Do not change global color tokens.
+Adjust only conflicting existing selectors in `styles.css`; keep global color tokens unchanged.
 
-- [ ] **Step 6: Run focused + full verification**
-
-Run:
+- [ ] **Step 5: Run focused/full verification**
 
 ```bash
 npm test -- src/presentation/stageCommandLayout.test.ts
@@ -500,20 +483,20 @@ npm run build
 
 Expected: PASS.
 
-- [ ] **Step 7: Manual desktop checkpoint**
+- [ ] **Step 6: Manual desktop checkpoint**
 
-Open SS1 and SS4 at desktop width. Verify before continuing:
+On SS1 and SS4 verify:
 
-- title and command bar fit without wrapping into unreadable rows;
+- title + command bar stay compact;
 - map is visible in the first meaningful viewport;
-- START/FINISH, km labels, arrows and environment chips still render;
-- SS4 still shows historical-reference mode at the current date;
-- no duplicate six-cell context strip appears inside/above the map.
+- START/FINISH, distance labels, arrows and weather chips still render;
+- current historical-reference wording remains correct;
+- no duplicate status strip exists.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/components/StageDetail.tsx src/components/RallyMap.tsx src/stageCommandView.css src/main.tsx src/styles.css src/presentation/stageCommandLayout.test.ts
+git add src/presentation/stageCommandLayout.test.ts src/components/StageDetail.tsx src/stageCommandView.css src/main.tsx src/styles.css
 git commit -m "feat: make stage detail map first"
 ```
 
@@ -530,17 +513,15 @@ git commit -m "feat: make stage detail map first"
 - Modify: `src/components/StageDetail.tsx`
 - Modify: `src/passComparison.css`
 - Modify: `package.json`
-- Modify: lockfile generated by `npm install` if present/created.
 
 **Interfaces:**
-- Produces:
-  - `passRailPercent(activeCode: string, firstCode: string, secondCode: string): 0 | 100`
-  - `prefersReducedMotion(matchMediaOverride?): boolean`
-  - `motionDuration(reduced: boolean, normalSeconds: number): number`
-  - `PassTimeRail` receives only pass codes/names/times/hrefs/active code.
-- Existing weather comparison values and `TemperatureDeltaProfile` remain unchanged.
+- `passRailPercent(activeCode, firstCode, secondCode): 0 | 100`
+- `prefersReducedMotion(matchMediaOverride?): boolean`
+- `motionDuration(reduced, normalSeconds): number`
+- `PassTimeRail` receives pass codes/names/times/hrefs/active code only.
+- Existing weather deltas and `TemperatureDeltaProfile` remain unchanged.
 
-- [ ] **Step 1: Write RED tests for rail position and reduced motion**
+- [ ] **Step 1: Write RED helper tests**
 
 Create `src/presentation/passRail.test.ts`:
 
@@ -554,7 +535,7 @@ test('passRailPercent maps first and second pass to opposite rail ends', () => {
   assert.equal(passRailPercent('SS4', 'SS1', 'SS4'), 100)
 })
 
-test('passRailPercent fails closed to first pass for an unrelated stage code', () => {
+test('passRailPercent fails closed to first pass for an unrelated code', () => {
   assert.equal(passRailPercent('SS9', 'SS1', 'SS4'), 0)
 })
 ```
@@ -566,20 +547,18 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { motionDuration, prefersReducedMotion } from './uiMotion.ts'
 
-test('motionDuration becomes zero when reduced motion is requested', () => {
+test('motionDuration becomes zero for reduced motion', () => {
   assert.equal(motionDuration(true, 0.22), 0)
   assert.equal(motionDuration(false, 0.22), 0.22)
 })
 
-test('prefersReducedMotion accepts an injectable matchMedia for deterministic tests', () => {
+test('prefersReducedMotion accepts injected matchMedia', () => {
   assert.equal(prefersReducedMotion(() => ({ matches: true })), true)
   assert.equal(prefersReducedMotion(() => ({ matches: false })), false)
 })
 ```
 
-- [ ] **Step 2: Run the focused tests and verify RED**
-
-Run:
+- [ ] **Step 2: Run and verify RED**
 
 ```bash
 npm test -- src/presentation/passRail.test.ts src/presentation/uiMotion.test.ts
@@ -587,9 +566,9 @@ npm test -- src/presentation/passRail.test.ts src/presentation/uiMotion.test.ts
 
 Expected: FAIL because the modules do not exist.
 
-- [ ] **Step 3: Implement the pure helpers**
+- [ ] **Step 3: Implement the helpers**
 
-Create `src/presentation/passRail.ts`:
+`src/presentation/passRail.ts`:
 
 ```ts
 export function passRailPercent(
@@ -603,7 +582,7 @@ export function passRailPercent(
 }
 ```
 
-Create `src/presentation/uiMotion.ts`:
+`src/presentation/uiMotion.ts`:
 
 ```ts
 type MatchMediaLike = (query: string) => { matches: boolean }
@@ -619,9 +598,7 @@ export function motionDuration(reduced: boolean, normalSeconds: number): number 
 }
 ```
 
-- [ ] **Step 4: Run focused tests and verify GREEN**
-
-Run:
+- [ ] **Step 4: Run and verify GREEN**
 
 ```bash
 npm test -- src/presentation/passRail.test.ts src/presentation/uiMotion.test.ts
@@ -629,21 +606,17 @@ npm test -- src/presentation/passRail.test.ts src/presentation/uiMotion.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 5: Install Motion and keep the dependency surface minimal**
+- [ ] **Step 5: Add the one Motion dependency without changing package-management pattern**
 
-Run:
+If the repository still has no committed lockfile:
 
 ```bash
-npm install motion
+npm install --no-package-lock motion
 ```
 
-Verify `package.json` adds `motion` and no other UI dependency.
+If a committed npm lockfile exists at execution time, use normal `npm install motion` and commit the updated lockfile.
 
-Do not import from `motion/react`; this pass uses:
-
-```ts
-import { animate } from 'motion/mini'
-```
+Verify no Radix/shadcn/AutoAnimate/deck.gl dependency appears.
 
 - [ ] **Step 6: Implement `PassTimeRail`**
 
@@ -667,11 +640,13 @@ export function PassTimeRail({ activeCode, first, second }: PassTimeRailProps) {
 
   useEffect(() => {
     if (!indicatorRef.current) return
-    const reduced = prefersReducedMotion()
     const controls = animate(
       indicatorRef.current,
       { left: `${position}%` },
-      { duration: motionDuration(reduced, 0.2), easing: 'ease-out' },
+      {
+        duration: motionDuration(prefersReducedMotion(), 0.2),
+        ease: 'easeOut',
+      },
     )
     return () => controls.cancel()
   }, [position])
@@ -683,11 +658,9 @@ export function PassTimeRail({ activeCode, first, second }: PassTimeRailProps) {
         <strong>{first.time}</strong>
         <small>{first.name}</small>
       </a>
-
       <div className="pass-time-track" aria-hidden="true">
         <span ref={indicatorRef} className="pass-time-indicator" style={{ left: `${position}%` }} />
       </div>
-
       <a className={activeCode === second.code ? 'pass-time-stop pass-time-stop--active' : 'pass-time-stop'} href={second.href}>
         <span>PASS 2 · {second.code}</span>
         <strong>{second.time}</strong>
@@ -698,13 +671,13 @@ export function PassTimeRail({ activeCode, first, second }: PassTimeRailProps) {
 }
 ```
 
-If the installed Motion version names the easing option `ease` rather than `easing`, follow the installed package's TypeScript definition and use the typed property. Do not suppress TypeScript errors with `any`.
+Do not suppress Motion typing with `any`; if the installed version rejects an option name, use the option exposed by its TypeScript definitions.
 
-- [ ] **Step 7: Replace only the current pass selector UI**
+- [ ] **Step 7: Replace only the selector UI in `StageDetail`**
 
-In `StageDetail.tsx`, keep `comparisonStatus`, `passComparisonView`, `temperatureProfile` and all delta calculations exactly as they are.
+Keep `comparisonStatus`, `passComparisonView`, `temperatureProfile` and all weather calculations unchanged.
 
-Replace the old `pass-selector/pass-card/pass-arrow` JSX with:
+Use:
 
 ```tsx
 <PassTimeRail
@@ -724,11 +697,11 @@ Replace the old `pass-selector/pass-card/pass-arrow` JSX with:
 />
 ```
 
-Keep the existing four comparison metrics and `TemperatureDeltaProfile` below the rail.
+Keep the four existing comparison metrics and `TemperatureDeltaProfile` underneath.
 
-- [ ] **Step 8: Replace selector CSS with rail CSS**
+- [ ] **Step 8: Replace pass-card CSS with time-rail CSS**
 
-In `src/passComparison.css`, remove `.pass-selector`, `.pass-card*` and `.pass-arrow` rules and add:
+In `src/passComparison.css`, remove `.pass-selector`, `.pass-card*`, `.pass-arrow`, then add:
 
 ```css
 .pass-time-rail {
@@ -745,7 +718,6 @@ In `src/passComparison.css`, remove `.pass-selector`, `.pass-card*` and `.pass-a
   color: #919ba1;
   text-decoration: none;
 }
-
 .pass-time-stop:last-child { text-align: right; }
 .pass-time-stop span { color: var(--amber); font-size: 0.56rem; font-weight: 900; letter-spacing: 0.1em; }
 .pass-time-stop strong { color: var(--ink); font-size: 1.05rem; }
@@ -758,7 +730,6 @@ In `src/passComparison.css`, remove `.pass-selector`, `.pass-card*` and `.pass-a
   margin: 0 7px;
   background: #384248;
 }
-
 .pass-time-track::before,
 .pass-time-track::after {
   position: absolute;
@@ -771,10 +742,8 @@ In `src/passComparison.css`, remove `.pass-selector`, `.pass-card*` and `.pass-a
   content: '';
   transform: translateY(-50%);
 }
-
 .pass-time-track::before { left: 0; transform: translate(-50%, -50%); }
 .pass-time-track::after { right: 0; transform: translate(50%, -50%); }
-
 .pass-time-indicator {
   position: absolute;
   top: 50%;
@@ -790,57 +759,50 @@ In `src/passComparison.css`, remove `.pass-selector`, `.pass-card*` and `.pass-a
 @media (max-width: 640px) {
   .pass-time-rail { grid-template-columns: 1fr 1fr; }
   .pass-time-track { grid-column: 1 / -1; grid-row: 2; }
-  .pass-time-stop:last-child { text-align: right; }
 }
 ```
 
-- [ ] **Step 9: Run full tests/build and check pass values are unchanged**
-
-Run:
+- [ ] **Step 9: Verify no comparison regression**
 
 ```bash
 npm test
 npm run build
 ```
 
-Expected: all existing weather comparison tests stay green; no numerical changes.
+Manual SS1/SS4 check:
 
-Manual check on SS1 and SS4:
-
-- SS1 still shows the same Pass 2 − Pass 1 values as before;
-- SS4 shows the same values with the indicator on Pass 2;
-- switching hashes does not remount or alter route geometry unexpectedly;
-- reduced-motion browser setting makes the indicator jump or move effectively instantly.
+- same Pass 2 − Pass 1 values as before;
+- indicator is on correct pass;
+- same temperature profile;
+- route geometry does not change when switching repeated passes;
+- reduced-motion mode makes movement immediate/minimal.
 
 - [ ] **Step 10: Commit**
 
 ```bash
-git add package.json package-lock.json src/presentation/passRail.ts src/presentation/passRail.test.ts src/presentation/uiMotion.ts src/presentation/uiMotion.test.ts src/components/PassTimeRail.tsx src/components/StageDetail.tsx src/passComparison.css
+git add package.json src/presentation/passRail.ts src/presentation/passRail.test.ts src/presentation/uiMotion.ts src/presentation/uiMotion.test.ts src/components/PassTimeRail.tsx src/components/StageDetail.tsx src/passComparison.css
 git commit -m "feat: add pass time rail motion"
 ```
 
-If the repository does not use `package-lock.json`, omit it from `git add`; do not invent a second lockfile format.
+Include an existing lockfile in `git add` only if the repository already tracks one.
 
 ---
 
-### Task 4: Move deep weather, safety, simulation and provenance behind progressive disclosure
+### Task 4: Put deep detail behind accessible progressive disclosure
 
 **Files:**
 - Create: `src/components/StageDisclosure.tsx`
-- Modify: `src/components/StageDetail.tsx`
+- Create: `src/presentation/stageDisclosureContract.test.ts`
 - Modify: `src/components/RallyMap.tsx`
+- Modify: `src/components/StageDetail.tsx`
 - Modify: `src/stageCommandView.css`
 
 **Interfaces:**
-- `StageDisclosure` props:
-  - `id: string`
-  - `label: string`
-  - `meta?: string`
-  - `defaultOpen?: boolean`
-  - `children: ReactNode`
-- `RallyMap` continues reporting snapshots through `onEnvironmentChange`; `StageDetail` already owns the same snapshots in `currentEnvironment`.
+- `StageDisclosure` props: `id`, `label`, optional `meta`, optional `defaultOpen`, `children`.
+- Existing `RallyMap` keeps owning its environment dataset/methodology note.
+- Existing `StageDetail` keeps owning safety timeline, simulation UI and source list.
 
-- [ ] **Step 1: Add a source-contract test for accessible disclosures**
+- [ ] **Step 1: Write RED accessibility contract test**
 
 Create `src/presentation/stageDisclosureContract.test.ts`:
 
@@ -851,16 +813,15 @@ import { readFileSync } from 'node:fs'
 
 const source = readFileSync(new URL('../components/StageDisclosure.tsx', import.meta.url), 'utf8')
 
-test('StageDisclosure exposes button semantics and ARIA state', () => {
+test('StageDisclosure exposes a button with explicit ARIA state and target', () => {
   assert.match(source, /type="button"/)
   assert.match(source, /aria-expanded=/)
   assert.match(source, /aria-controls=/)
+  assert.match(source, /aria-hidden=/)
 })
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
-
-Run:
+- [ ] **Step 2: Run and verify RED**
 
 ```bash
 npm test -- src/presentation/stageDisclosureContract.test.ts
@@ -868,7 +829,7 @@ npm test -- src/presentation/stageDisclosureContract.test.ts
 
 Expected: FAIL because `StageDisclosure.tsx` does not exist.
 
-- [ ] **Step 3: Implement accessible controlled disclosure**
+- [ ] **Step 3: Implement controlled disclosure with safe collapsed focus behavior**
 
 Create `src/components/StageDisclosure.tsx`:
 
@@ -890,12 +851,13 @@ export function StageDisclosure({ id, label, meta, defaultOpen = false, children
   const panelRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (!panelRef.current || !open) return
-    const reduced = prefersReducedMotion()
+    if (!panelRef.current) return
     const controls = animate(
       panelRef.current,
-      { opacity: [0.72, 1], transform: ['translateY(-4px)', 'translateY(0px)'] },
-      { duration: motionDuration(reduced, 0.18), easing: 'ease-out' },
+      open
+        ? { opacity: [0.72, 1], transform: ['translateY(-4px)', 'translateY(0px)'] }
+        : { opacity: [1, 0.72], transform: ['translateY(0px)', 'translateY(-2px)'] },
+      { duration: motionDuration(prefersReducedMotion(), 0.18), ease: 'easeOut' },
     )
     return () => controls.cancel()
   }, [open])
@@ -913,82 +875,65 @@ export function StageDisclosure({ id, label, meta, defaultOpen = false, children
         {meta ? <small>{meta}</small> : null}
         <b aria-hidden="true">{open ? '−' : '+'}</b>
       </button>
-      <div id={id} ref={panelRef} className="stage-disclosure-panel" hidden={!open}>
-        {children}
+      <div
+        id={id}
+        className="stage-disclosure-body"
+        data-open={open ? 'true' : 'false'}
+        aria-hidden={!open}
+        inert={!open}
+      >
+        <div ref={panelRef} className="stage-disclosure-panel">
+          {children}
+        </div>
       </div>
     </section>
   )
 }
 ```
 
-Use the actual typed easing option accepted by the installed Motion version as in Task 3. The `hidden` state prevents keyboard focus from entering collapsed content; the transition is an entrance animation, while closing is immediate and safe.
+If React's installed DOM typings reject boolean `inert`, use the standards-compliant form accepted by those typings; do not remove the focus guard and do not use `any`.
 
-- [ ] **Step 4: Run the focused contract test and verify GREEN**
-
-Run:
+- [ ] **Step 4: Run focused test and build immediately**
 
 ```bash
 npm test -- src/presentation/stageDisclosureContract.test.ts
+npm run build
 ```
 
-Expected: PASS.
+Expected: PASS. This build checkpoint confirms the actual React 19 `inert` typing before integration.
 
-- [ ] **Step 5: Move detailed environment nodes out of `RallyMap`**
+- [ ] **Step 5: Wrap the existing detailed weather panel inside `RallyMap`**
 
-`RallyMap` currently builds `environmentCards` from the same snapshots already reported to `StageDetail` via `onEnvironmentChange`.
+Do **not** move environment data ownership.
 
-Remove from `RallyMap`:
+Keep unchanged:
 
-```ts
-const environmentCards = useMemo(
-  () => environment.map((snapshot) => ({ snapshot, view: presentEnvironmentSnapshot(snapshot) })),
-  [environment],
-)
-```
-
-and remove the detailed `.environment-panel` JSX from `RallyMap`.
-
-Do **not** remove:
-
-- `environmentDataset`;
-- `environmentStatus`;
-- `environment` snapshots used by map annotations;
+- `environmentDataset` / `environmentStatus`;
+- `environmentCards`;
 - `buildEnvironmentChips`;
-- `onEnvironmentChange` callback;
-- map layers/markers.
+- `onEnvironmentChange`;
+- `environmentDataset.methodologyNote`;
+- map sources/layers/markers.
 
-In `StageDetail.tsx`, import:
-
-```ts
-import { presentEnvironmentSnapshot } from '../map/environmentView'
-```
-
-and derive:
-
-```ts
-const environmentCards = useMemo(
-  () => currentEnvironment.map((snapshot) => ({ snapshot, view: presentEnvironmentSnapshot(snapshot) })),
-  [currentEnvironment],
-)
-```
-
-Render the existing weather-node grid inside:
+Wrap the existing `.environment-panel` JSX:
 
 ```tsx
 <StageDisclosure
   id="stage-weather-detail"
   label="WEATHER ALONG STAGE"
-  meta={currentWeatherSource ?? undefined}
+  meta={environmentDataset?.sourceLabel ?? 'WEATHER PENDING'}
 >
-  {/* existing environment header/grid/source/methodology content */}
+  <section className="environment-panel" aria-label="Contexto ambiental a lo largo del tramo">
+    {/* existing environment header, state, node cards, methodology note and source line unchanged */}
+  </section>
 </StageDisclosure>
 ```
 
-Preserve the existing note that the nodes are not stations and preserve the historical methodology note when present.
+This is intentionally a wrapper-only change so the historical methodology note cannot be lost.
 
-- [ ] **Step 6: Wrap the existing safety timeline without changing offsets**
+- [ ] **Step 6: Wrap safety timeline in `StageDetail` without changing offsets**
 
-Keep the existing `safetyTimeline` `useMemo` untouched. Move only its JSX into:
+Keep `safetyTimeline` `useMemo` untouched. Wrap only its rendered timeline:
 
 ```tsx
 <StageDisclosure
@@ -996,15 +941,13 @@ Keep the existing `safetyTimeline` `useMemo` untouched. Move only its JSX into:
   label="SAFETY TRAIN TIMELINE"
   meta={`${safetyTimeline.length} steps`}
 >
-  {/* current safety timeline cards */}
+  {/* existing timeline JSX unchanged */}
 </StageDisclosure>
 ```
 
-- [ ] **Step 7: Wrap simulation while preserving the same enable state**
+- [ ] **Step 7: Wrap simulation without changing its activation contract**
 
-Keep `simulationOpen`, `run`, `startSlots`, `fleetSnapshot` behavior and `RallyMap simulationEnabled={simulationOpen}` unchanged.
-
-Wrap the current simulation gate/details in:
+Keep `simulationOpen`, `run`, `startSlots` and `RallyMap simulationEnabled={simulationOpen}` unchanged.
 
 ```tsx
 <StageDisclosure
@@ -1012,15 +955,13 @@ Wrap the current simulation gate/details in:
   label="SIMULATION"
   meta={run ? 'OPTIONAL LAYER' : 'PENDING'}
 >
-  {/* existing simulation gate and details */}
+  {/* existing simulation-gate and simulation-details JSX unchanged */}
 </StageDisclosure>
 ```
 
-The existing simulation button remains the control that enables/disables map vehicle motion. Opening the disclosure by itself must not start the simulation.
+Opening the disclosure must **not** start vehicle motion; the existing simulation button remains authoritative.
 
-- [ ] **Step 8: Wrap provenance without removing source dates or disclaimers**
-
-Move the current `.sources` block into:
+- [ ] **Step 8: Wrap provenance without dropping sources or dates**
 
 ```tsx
 <StageDisclosure
@@ -1028,13 +969,11 @@ Move the current `.sources` block into:
   label="PROVENANCE"
   meta={`${sources.length} sources`}
 >
-  {/* existing source list, source-note and integrity text */}
+  {/* existing sources block, notes, disclaimers and access dates unchanged */}
 </StageDisclosure>
 ```
 
-No source URL, access date or attribution may be dropped.
-
-- [ ] **Step 9: Add disclosure styles**
+- [ ] **Step 9: Add disclosure CSS**
 
 Append to `src/stageCommandView.css`:
 
@@ -1072,26 +1011,19 @@ Append to `src/stageCommandView.css`:
   font-weight: 900;
   letter-spacing: 0.12em;
 }
+.stage-disclosure-trigger small { color: var(--dim); font-size: 0.58rem; }
+.stage-disclosure-trigger b { color: var(--amber-bright); font-size: 1rem; font-weight: 500; }
+.stage-disclosure-trigger:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
 
-.stage-disclosure-trigger small {
-  color: var(--dim);
-  font-size: 0.58rem;
+.stage-disclosure-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 180ms ease;
 }
-
-.stage-disclosure-trigger b {
-  color: var(--amber-bright);
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.stage-disclosure-panel {
-  padding: 0 14px 14px;
-}
-
-.stage-disclosure-trigger:focus-visible {
-  outline: 2px solid var(--cyan);
-  outline-offset: -2px;
-}
+.stage-disclosure-body[data-open='true'] { grid-template-rows: 1fr; }
+.stage-disclosure-panel { min-height: 0; overflow: hidden; padding: 0 14px; }
+.stage-disclosure-body[data-open='true'] .stage-disclosure-panel { padding-bottom: 14px; }
 
 @media (max-width: 560px) {
   .stage-disclosure-trigger { grid-template-columns: 1fr auto; }
@@ -1099,47 +1031,44 @@ Append to `src/stageCommandView.css`:
 }
 ```
 
-- [ ] **Step 10: Run full tests/build and manual simulation regression**
-
-Run:
+- [ ] **Step 10: Run full regression and manual SS1 simulation check**
 
 ```bash
 npm test
 npm run build
 ```
 
-Manual SS1 check:
+Manual:
 
-1. map renders with no simulation when disclosure is closed;
-2. opening `SIMULATION` does not start cars;
-3. clicking the existing simulation button starts the exact same fleet behavior;
-4. closing/reopening the disclosure does not corrupt map state;
-5. source/provenance and weather detail remain reachable by keyboard.
+1. open weather detail and confirm all current nodes/methodology/source text remains;
+2. open Simulation — cars must still be off;
+3. click existing simulation control — cars behave exactly as before;
+4. provenance and safety remain keyboard reachable;
+5. collapsed content cannot receive keyboard focus.
 
 - [ ] **Step 11: Commit**
 
 ```bash
-git add src/components/StageDisclosure.tsx src/components/StageDetail.tsx src/components/RallyMap.tsx src/stageCommandView.css src/presentation/stageDisclosureContract.test.ts
+git add src/components/StageDisclosure.tsx src/presentation/stageDisclosureContract.test.ts src/components/RallyMap.tsx src/components/StageDetail.tsx src/stageCommandView.css
 git commit -m "feat: add progressive stage detail"
 ```
 
 ---
 
-### Task 5: Apply restrained entrance motion and presentation polish
+### Task 5: Apply restrained entrance motion and final visual hierarchy
 
 **Files:**
+- Create: `src/presentation/stageCommandMotionContract.test.ts`
 - Modify: `src/components/StageDetail.tsx`
 - Modify: `src/stageCommandView.css`
 - Modify: `src/styles.css`
 - Modify: `src/passComparison.css`
 
 **Interfaces:**
-- Consumes: `animate`, `prefersReducedMotion`, `motionDuration` from Task 3.
-- Produces: subtle stage header and map reveal only; no new state or data flow.
+- Uses `animate`, `prefersReducedMotion`, `motionDuration` from Task 3.
+- Adds no new data/state contract.
 
-- [ ] **Step 1: Add a reduced-motion CSS contract test**
-
-Create `src/presentation/stageCommandMotionContract.test.ts`:
+- [ ] **Step 1: Write RED reduced-motion contract test**
 
 ```ts
 import assert from 'node:assert/strict'
@@ -1148,24 +1077,24 @@ import { readFileSync } from 'node:fs'
 
 const css = readFileSync(new URL('../stageCommandView.css', import.meta.url), 'utf8')
 
-test('Stage Command View includes a reduced-motion fallback', () => {
+test('Stage Command View contains a reduced-motion fallback', () => {
   assert.match(css, /prefers-reduced-motion:\s*reduce/)
 })
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+Save as `src/presentation/stageCommandMotionContract.test.ts`.
 
-Run:
+- [ ] **Step 2: Run and verify RED**
 
 ```bash
 npm test -- src/presentation/stageCommandMotionContract.test.ts
 ```
 
-Expected: FAIL until the media query is added.
+Expected: FAIL before the media query exists.
 
-- [ ] **Step 3: Add two local refs and restrained entrance animations**
+- [ ] **Step 3: Add restrained hero/map reveal**
 
-In `StageDetail.tsx` update the React import to include `useRef`, and import:
+In `StageDetail.tsx`, add `useRef` and imports:
 
 ```ts
 import { animate } from 'motion/mini'
@@ -1183,63 +1112,53 @@ useEffect(() => {
   const duration = motionDuration(reduced, 0.22)
   const controls = [
     heroRef.current
-      ? animate(heroRef.current, { opacity: [0.92, 1], transform: ['translateY(5px)', 'translateY(0px)'] }, { duration })
+      ? animate(
+          heroRef.current,
+          { opacity: [0.92, 1], transform: ['translateY(5px)', 'translateY(0px)'] },
+          { duration, ease: 'easeOut' },
+        )
       : null,
     mapStageRef.current
-      ? animate(mapStageRef.current, { opacity: [0.94, 1], transform: ['scale(0.995)', 'scale(1)'] }, { duration, delay: reduced ? 0 : 0.04 })
+      ? animate(
+          mapStageRef.current,
+          { opacity: [0.94, 1], transform: ['scale(0.995)', 'scale(1)'] },
+          { duration, delay: reduced ? 0 : 0.04, ease: 'easeOut' },
+        )
       : null,
   ]
   return () => controls.forEach((control) => control?.cancel())
 }, [stage.code])
 ```
 
-Attach the refs:
+Attach refs to the stage hero and `stage-map-primary` section.
 
-```tsx
-<header ref={heroRef} className="stage-hero stage-command-hero">...</header>
-<section ref={mapStageRef} className="stage-map-primary" ...>...</section>
-```
+Motion must never animate MapLibre coordinates, route features or camera state.
 
-Use only typed Motion options accepted by the installed version. Do not animate map coordinates, markers or MapLibre camera state from Motion.
+- [ ] **Step 4: Reduce equal-weight boxes and preserve semantic colors**
 
-- [ ] **Step 4: Tighten hierarchy and reduce equal-weight boxes**
-
-In `stageCommandView.css` and only the necessary existing selectors:
-
-- reduce hero vertical padding;
-- make command bar visually secondary to the map;
-- remove outer borders from purely editorial headings;
-- keep strong borders for safety/provenance-sensitive warnings;
-- keep weather values cyan and stage/time/action amber;
-- keep the map panel border at one pixel;
-- avoid shadows on ordinary content cards;
-- keep map labels unchanged.
-
-Add:
-
-```css
-.stage-command-view .section-heading {
-  border-bottom-color: rgba(42, 52, 60, 0.72);
-}
-
-.stage-command-view .weather-metrics article,
-.stage-command-view .pass-comparison-metrics article {
-  border-color: #223039;
-  background: #091015;
-}
-
-.stage-command-view .intelligence-grid {
-  margin-top: 8px;
-}
-```
-
-Add `stage-command-view` to the stage `<main>` class list:
+Add `stage-command-view` to the stage `<main>`:
 
 ```tsx
 <main className="app-shell stage-detail-shell stage-command-view">
 ```
 
-- [ ] **Step 5: Add reduced-motion CSS fallback**
+In command-view CSS:
+
+```css
+.stage-command-view .section-heading {
+  border-bottom-color: rgba(42, 52, 60, 0.72);
+}
+.stage-command-view .weather-metrics article,
+.stage-command-view .pass-comparison-metrics article {
+  border-color: #223039;
+  background: #091015;
+}
+.stage-command-view .intelligence-grid { margin-top: 8px; }
+```
+
+Keep safety warnings visually stronger than ordinary cards. Do not recolor map labels or evidence states merely for decoration.
+
+- [ ] **Step 5: Add reduced-motion CSS**
 
 Append:
 
@@ -1256,41 +1175,32 @@ Append:
 }
 ```
 
-Do not use `display: none`, opacity changes or content suppression inside reduced-motion rules.
+This rule must not hide or suppress content.
 
-- [ ] **Step 6: Finish mobile behavior**
+- [ ] **Step 6: Finish responsive behavior without hiding overflow bugs**
 
-At `max-width: 780px` / `560px` verify and adjust:
+At laptop/tablet/phone breakpoints ensure:
 
-- hero becomes single column;
-- share button stays reachable near the title;
-- command bar is 2 columns at phone width;
-- map remains before deep analytics;
-- pass rail has no horizontal overflow;
-- comparison metrics are 2 columns then 1 column at narrow width;
-- disclosures use full-width touch targets;
-- source URLs wrap rather than overflow;
-- no stage title or badge forces page width beyond the viewport.
+- hero is single column when needed;
+- share control remains near title;
+- command bar becomes 3 columns then 2;
+- map remains above deep analytics;
+- pass rail and comparison metrics do not overflow;
+- disclosures are full-width touch targets;
+- source URLs wrap.
 
-Use:
+Add:
 
 ```css
 .stage-command-view,
-.stage-command-view * {
-  min-width: 0;
-}
-
+.stage-command-view * { min-width: 0; }
 .stage-disclosure-panel a,
-.stage-command-view .sources a {
-  overflow-wrap: anywhere;
-}
+.stage-command-view .sources a { overflow-wrap: anywhere; }
 ```
 
-Do not globally apply `overflow-x: hidden` to hide layout bugs.
+Do **not** add global `overflow-x: hidden` to mask mistakes.
 
-- [ ] **Step 7: Run contract/full tests and production build**
-
-Run:
+- [ ] **Step 7: Run tests/build**
 
 ```bash
 npm test -- src/presentation/stageCommandMotionContract.test.ts
@@ -1300,57 +1210,53 @@ npm run build
 
 Expected: PASS.
 
-- [ ] **Step 8: Manual reduced-motion and responsive checkpoint**
+- [ ] **Step 8: Firefox visual checkpoint**
 
-In Firefox:
+Check approximately 1440 px, 1024 px and 390 px widths plus reduced-motion preference.
 
-- desktop width ~1440 px;
-- laptop width ~1024 px;
-- phone width ~390 px;
-- reduced-motion preference enabled.
+Verify:
 
-Verify content order, keyboard access, no horizontal scroll, map markers remain legible, and Motion effects do not delay interaction.
+- no horizontal scroll;
+- map labels remain legible;
+- stage command bar remains readable;
+- disclosures remain keyboard usable;
+- motion does not delay content or imply live data.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add src/components/StageDetail.tsx src/stageCommandView.css src/styles.css src/passComparison.css src/presentation/stageCommandMotionContract.test.ts
+git add src/presentation/stageCommandMotionContract.test.ts src/components/StageDetail.tsx src/stageCommandView.css src/styles.css src/passComparison.css
 git commit -m "style: polish Stage Command View"
 ```
 
 ---
 
-### Task 6: Final regression pass, README checkpoint and PR evidence
+### Task 6: Final regression, README checkpoint and PR evidence
 
 **Files:**
 - Modify: `README.md`
-- No domain code changes expected.
+- No domain-code changes expected.
 
-**Interfaces:**
-- Produces: verified presentation-ready feature branch with current documentation and reproducible CI evidence.
-
-- [ ] **Step 1: Run the complete local verification from a clean install state**
-
-Run:
+- [ ] **Step 1: Run clean final verification**
 
 ```bash
-npm install
+npm install --no-package-lock
 npm test
 npm run build
 ```
 
+If the repository tracks an npm lockfile at execution time, use the normal lockfile-respecting install command instead.
+
 Expected:
 
-- all pre-existing 70 tests plus the new presentation tests pass;
+- all previous 70 tests plus new presentation tests pass;
 - TypeScript compile passes;
-- Vite production build passes;
-- no new vulnerability/error is introduced by the single Motion dependency.
+- Vite build passes;
+- the only new runtime UI dependency is Motion.
 
-A Vite chunk-size warning may remain if it is the same pre-existing warning; do not start unrelated code-splitting work in this task.
+The pre-existing Vite chunk-size warning is not scope for this task.
 
-- [ ] **Step 2: Verify all six Friday stages in Firefox**
-
-Open:
+- [ ] **Step 2: Smoke-test all six Friday stages in Firefox**
 
 ```text
 #/chile-2026/ss1-turquia
@@ -1361,54 +1267,50 @@ Open:
 #/chile-2026/ss6-hualqui
 ```
 
-For every stage verify:
+For each stage verify:
 
-- stage name/code/time/distance visible;
-- geometry status visible;
+- stage identity/time/distance;
+- geometry state;
 - map high in the page;
-- START/FINISH visible;
-- 5 km markers visible where applicable;
-- route arrows visible;
-- environmental chips visible when weather dataset is ready;
-- correct `FORECAST` or `HISTORICAL REF · 2021–2025` label;
+- START/FINISH;
+- 5 km labels where applicable;
+- route arrows;
+- environmental chips when weather is ready;
+- correct forecast/historical-reference wording;
 - official spatial points only where sourced;
-- disclosures open/close with keyboard and mouse;
+- disclosures work with mouse and keyboard;
 - no horizontal scroll.
 
-- [ ] **Step 3: Verify repeated-pass evidence integrity**
+- [ ] **Step 3: Verify repeated-pass integrity**
 
 For SS1↔SS4, SS2↔SS5 and SS3↔SS6:
 
-- the rail points to the active pass;
-- first/second times remain correct;
-- weather comparisons appear only when evidence modes are comparable;
-- `Pass 2 − Pass 1` values match the previous implementation;
-- temperature profile remains unchanged numerically;
+- rail indicator matches active pass;
+- times remain correct;
+- comparison appears only for comparable evidence modes;
+- Pass 2 − Pass 1 values remain unchanged;
+- temperature profile remains numerically unchanged;
 - no road-condition inference appears.
 
 - [ ] **Step 4: Verify SS1 simulation regression**
 
-On SS1:
-
 - open Simulation disclosure;
-- start simulation using the existing control;
-- confirm ten generic P1 vehicles and the current timing model still behave as before;
-- confirm closing the disclosure does not alter the underlying simulation contract;
-- confirm map animation remains MapLibre/requestAnimationFrame based, not Motion-controlled.
+- verify opening alone does not start motion;
+- use existing simulation control;
+- verify ten generic P1 vehicles and existing timing behavior;
+- verify vehicle animation remains MapLibre/requestAnimationFrame based.
 
-- [ ] **Step 5: Update README with one compact presentation note**
+- [ ] **Step 5: Add one compact README note**
 
-Add under `## What you see on a stage map` after the current list:
+Under `## What you see on a stage map` add:
 
 ```markdown
 The stage detail uses a map-first command view: the route and operational status stay visible first, while node-by-node weather, safety timing, simulation details and provenance remain available in collapsible sections below.
 ```
 
-Do not add a new long design section.
+Do not add another long design section.
 
-- [ ] **Step 6: Run final tests/build after README change**
-
-Run:
+- [ ] **Step 6: Run final tests/build after documentation change**
 
 ```bash
 npm test
@@ -1417,27 +1319,27 @@ npm run build
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit the documentation checkpoint**
+- [ ] **Step 7: Commit README checkpoint**
 
 ```bash
 git add README.md
 git commit -m "docs: describe Stage Command View"
 ```
 
-- [ ] **Step 8: Verify CI and Vercel on the final head**
+- [ ] **Step 8: Verify final CI + Vercel head**
 
-After pushing/committing through the connected repository flow, verify the final PR head has:
+Verify final PR head has:
 
-- GitHub Actions `CI` conclusion `success`;
-- test count equal to the local suite;
-- TypeScript/Vite build success;
-- Vercel deployment status `success`.
+- GitHub Actions `CI` = `success`;
+- actual final test count green;
+- TypeScript/Vite build green;
+- Vercel deployment = `success`.
 
-Do not merge the PR automatically. Leave the branch open for the final visual approval.
+Do not merge automatically; leave the PR open for visual approval.
 
-- [ ] **Step 9: Record the final PR verification summary**
+- [ ] **Step 9: Update PR verification block with actual evidence**
 
-Update the PR body verification block to the actual final head SHA/run values and summarize:
+Use actual final SHA/run/test count and include:
 
 ```markdown
 ## Stage Command View verification
@@ -1453,18 +1355,18 @@ Update the PR body verification block to the actual final head SHA/run values an
 - Vercel preview green
 ```
 
-Use the actual test count and head SHA from CI; do not copy the previous `70/70` number if new presentation tests increase the total.
+Do not copy the old `70/70` number after new tests are added; use the final CI count.
 
 ---
 
 ## Implementation Order Rationale
 
-1. **Command bar first** removes duplicate status information without touching layout-heavy pieces.
-2. **Map-first reordering second** creates the largest visible improvement while all data paths remain unchanged.
-3. **Pass rail third** introduces the single Motion dependency in one isolated feature before motion spreads anywhere else.
-4. **Progressive disclosure fourth** shortens the page after the primary hierarchy is already stable.
-5. **Polish/motion fifth** happens only after structure is correct, preventing animation from masking layout problems.
-6. **Final regression last** protects the current scientific/evidential behavior and keeps the PR unmerged until visual approval.
+1. **Command bar first** removes duplicated status without touching scientific or map logic.
+2. **Map-first order second** delivers the largest visible improvement with a small structural diff.
+3. **Pass rail third** introduces Motion in one isolated interaction before it is reused.
+4. **Disclosures fourth** reduce page length by wrapping existing content rather than relocating data ownership.
+5. **Polish fifth** happens only after hierarchy is correct, so animation cannot hide layout problems.
+6. **Regression last** protects all evidence and simulation behavior and leaves merge as a separate human decision.
 
 ## Explicit Non-Goals During Execution
 
@@ -1480,6 +1382,6 @@ Do not opportunistically:
 - add new WRC data sources;
 - recalibrate fleet timing;
 - split unrelated bundles because of the existing Vite size warning;
-- refactor the whole `StageDetail` domain/state layer.
+- refactor the whole `StageDetail` state/domain layer.
 
-Any of those is a separate task/spec after this Stage Command View is stable.
+Those are separate future tasks after Stage Command View is stable.
