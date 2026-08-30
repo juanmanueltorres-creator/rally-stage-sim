@@ -5,58 +5,96 @@
   background: var(--panel-soft);
 }
 
-.pass-selector {
+.pass-time-rail {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 10px;
-  align-items: stretch;
-  margin-top: 12px;
+  grid-template-columns: minmax(145px, auto) minmax(120px, 1fr) minmax(145px, auto);
+  gap: 14px;
+  align-items: center;
+  margin-top: 14px;
 }
 
-.pass-card {
+.pass-time-stop {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
-  padding: 13px 14px;
-  border: 1px solid #2d383e;
-  background: #090e12;
-  color: #c5cccf;
+  color: #919ba1;
   text-decoration: none;
 }
 
-.pass-card:hover {
-  border-color: #6c5734;
-  background: #0d1113;
+.pass-time-stop:last-child {
+  text-align: right;
 }
 
-.pass-card--active {
-  border-color: var(--amber);
-  background: #15120c;
-}
-
-.pass-card span {
+.pass-time-stop span {
   color: var(--amber);
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   font-weight: 900;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.1em;
 }
 
-.pass-card strong {
-  font-size: 1rem;
+.pass-time-stop strong {
+  color: var(--ink);
+  font-size: 1.05rem;
 }
 
-.pass-card small {
+.pass-time-stop small {
   overflow: hidden;
   color: var(--dim);
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.pass-arrow {
-  align-self: center;
-  color: #69747a;
-  font-size: 1.15rem;
+.pass-time-stop:hover strong,
+.pass-time-stop--active strong {
+  color: var(--amber-bright);
+}
+
+.pass-time-stop:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 4px;
+}
+
+.pass-time-track {
+  position: relative;
+  height: 2px;
+  margin: 0 7px;
+  background: #384248;
+}
+
+.pass-time-track::before,
+.pass-time-track::after {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border: 1px solid #69757b;
+  border-radius: 50%;
+  background: #0a0e11;
+  content: '';
+  transform: translateY(-50%);
+}
+
+.pass-time-track::before {
+  left: 0;
+  transform: translate(-50%, -50%);
+}
+
+.pass-time-track::after {
+  right: 0;
+  transform: translate(50%, -50%);
+}
+
+.pass-time-indicator {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #0a0e11;
+  border-radius: 50%;
+  background: var(--amber-bright);
+  box-shadow: 0 0 0 3px rgba(240, 189, 99, 0.14);
+  transform: translate(-50%, -50%);
 }
 
 .pass-comparison-metrics {
@@ -223,15 +261,6 @@
 }
 
 @media (max-width: 760px) {
-  .pass-selector {
-    grid-template-columns: 1fr;
-  }
-
-  .pass-arrow {
-    justify-self: center;
-    transform: rotate(90deg);
-  }
-
   .pass-comparison-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -246,6 +275,17 @@
 
   .temperature-profile-label {
     font-size: 0.45rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .pass-time-rail {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pass-time-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }
 
