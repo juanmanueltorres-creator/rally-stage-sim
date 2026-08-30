@@ -1,28 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
-import type { GeoJSONSource, MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl'
+import type { GeoJSONSource, MapLayerMouseEvent } from 'maplibre-gl'
 import type { SimulatedStageRun, StageGeometryStatus, StageLineString, StageSpectatorInfo } from '../domain/rally'
 import { buildRouteNodes } from '../map/environmentNodes'
 import { presentEnvironmentSnapshot } from '../map/environmentView'
+import { MAP_STYLE } from '../map/mapStyle'
 import { fetchOpenMeteoForecast, type RouteEnvironmentSnapshot } from '../map/openMeteo'
 import { buildStageGeoJson } from '../map/stageGeoJson'
 import { describeGeometryStatus } from '../presentation/geometryStatus'
 import { fleetSnapshot } from '../simulation/fleet'
 import { buildPlannedStartGrid } from '../simulation/startGrid'
-
-const MAP_STYLE: StyleSpecification = {
-  version: 8,
-  sources: {},
-  layers: [
-    {
-      id: 'background',
-      type: 'background',
-      paint: {
-        'background-color': '#071017',
-      },
-    },
-  ],
-}
 
 export type EnvironmentStatus = 'idle' | 'loading' | 'ready' | 'unavailable'
 
