@@ -5,7 +5,13 @@ export function normalizeSpectatorInfo(
   stageId: string,
   generalInfo?: StageSpectatorInfo,
 ): StageSpectatorInfo {
-  if (info) return info
+  if (info) {
+    return {
+      ...info,
+      accessPoints: info.accessPoints ?? [],
+      noSpectatorZones: info.noSpectatorZones ?? [],
+    }
+  }
 
   if (generalInfo) {
     return {
@@ -17,13 +23,15 @@ export function normalizeSpectatorInfo(
       capacityNote: generalInfo.capacityNote,
       spectatorZones: [],
       parking: [],
+      accessPoints: [],
+      noSpectatorZones: [],
       services: [],
       safetyTrain: generalInfo.safetyTrain,
       safetyNote: generalInfo.safetyNote,
       provenance: {
         state: 'planned',
         sources: generalInfo.provenance.sources,
-        note: 'Inherited event-level operating and safety guidance. Stage-specific access points, spectator zones, parking and services remain pending official publication.',
+        note: 'Inherited event-level operating and safety guidance. Stage-specific access points, spectator zones, parking, no-spectator areas and services remain pending official publication.',
       },
     }
   }
@@ -33,6 +41,8 @@ export function normalizeSpectatorInfo(
     accessStatus: 'pending',
     spectatorZones: [],
     parking: [],
+    accessPoints: [],
+    noSpectatorZones: [],
     services: [],
     provenance: {
       state: 'planned',
