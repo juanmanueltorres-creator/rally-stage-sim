@@ -1,6 +1,7 @@
 .stage-command-hero {
   padding-bottom: 18px;
   border-bottom: 0;
+  animation: stage-command-hero-in 220ms ease-out both;
 }
 
 .stage-command-bar {
@@ -45,10 +46,30 @@
 
 .stage-map-primary {
   margin-bottom: 10px;
+  animation: stage-command-map-in 240ms 40ms ease-out both;
 }
 
 .stage-map-primary .map-canvas {
   height: clamp(500px, 66vh, 760px);
+}
+
+.stage-detail-shell,
+.stage-detail-shell * {
+  min-width: 0;
+}
+
+.stage-detail-shell .section-heading {
+  border-bottom-color: rgba(42, 52, 60, 0.72);
+}
+
+.stage-detail-shell .weather-metrics article,
+.stage-detail-shell .pass-comparison-metrics article {
+  border-color: #223039;
+  background: #091015;
+}
+
+.stage-detail-shell .intelligence-grid {
+  margin-top: 8px;
 }
 
 .stage-detail-stack {
@@ -122,6 +143,33 @@
   padding-bottom: 14px;
 }
 
+.stage-disclosure-panel a,
+.stage-detail-shell .sources a {
+  overflow-wrap: anywhere;
+}
+
+@keyframes stage-command-hero-in {
+  from {
+    opacity: 0.92;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stage-command-map-in {
+  from {
+    opacity: 0.94;
+    transform: scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @media (max-width: 900px) {
   .stage-command-bar {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -129,6 +177,18 @@
 
   .stage-map-primary .map-canvas {
     height: clamp(430px, 62vh, 650px);
+  }
+}
+
+@media (max-width: 780px) {
+  .stage-command-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .stage-command-hero .stage-hero-actions {
+    justify-self: start;
+    text-align: left;
   }
 }
 
@@ -149,5 +209,17 @@
     grid-column: 1 / -1;
     grid-row: 2;
     padding-bottom: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-detail-shell *,
+  .stage-detail-shell *::before,
+  .stage-detail-shell *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
   }
 }
