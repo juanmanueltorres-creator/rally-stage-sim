@@ -51,6 +51,77 @@
   height: clamp(500px, 66vh, 760px);
 }
 
+.stage-detail-stack {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.stage-disclosure {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #090d10;
+}
+
+.stage-disclosure-trigger {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.stage-disclosure-trigger > span {
+  color: var(--amber);
+  font-size: 0.61rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.stage-disclosure-trigger small {
+  color: var(--dim);
+  font-size: 0.58rem;
+}
+
+.stage-disclosure-trigger b {
+  color: var(--amber-bright);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.stage-disclosure-trigger:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+}
+
+.stage-disclosure-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 180ms ease;
+}
+
+.stage-disclosure-body[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.stage-disclosure-panel {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 14px;
+}
+
+.stage-disclosure-body[data-open='true'] .stage-disclosure-panel {
+  padding-bottom: 14px;
+}
+
 @media (max-width: 900px) {
   .stage-command-bar {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -68,5 +139,15 @@
 
   .stage-map-primary .map-canvas {
     height: min(62vh, 520px);
+  }
+
+  .stage-disclosure-trigger {
+    grid-template-columns: 1fr auto;
+  }
+
+  .stage-disclosure-trigger small {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-bottom: 8px;
   }
 }
