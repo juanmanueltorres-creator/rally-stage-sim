@@ -27,6 +27,16 @@ const stages: RallyScheduleStage[] = [
   },
 ]
 
+const summary: StageWeatherSummary = {
+  temperatureMinC: 11.2,
+  temperatureMaxC: 14.8,
+  maxGustKmh: 31,
+  maxPrecipitationMm: 1.8,
+  elevationMinM: 96,
+  elevationMaxM: 271,
+  validAt: '2026-09-11T09:00',
+}
+
 test('groupScheduleByDay keeps rally stages ordered under human-readable day labels', () => {
   assert.deepEqual(groupScheduleByDay(stages).map((group) => ({ label: group.label, codes: group.stages.map((stage) => stage.code) })), [
     { label: 'VIERNES 11', codes: ['SS1'] },
@@ -39,18 +49,8 @@ test('totalCompetitiveKm sums the schedule snapshot rather than hardcoding the r
   assert.equal(totalCompetitiveKm(stages), 65.41)
 })
 
-test('describeStageConditions reports signals without claiming actual grip or road state', () => {
-  const summary: StageWeatherSummary = {
-    temperatureMinC: 11.2,
-    temperatureMaxC: 14.8,
-    maxGustKmh: 31,
-    maxPrecipitationMm: 1.8,
-    elevationMinM: 96,
-    elevationMaxM: 271,
-    validAt: '2026-09-11T09:00',
-  }
-
-  assert.deepEqual(describeStageConditions(summary), [
+test('describeStageConditions reports forecast signals without claiming actual grip or road state', () => {
+  assert.deepEqual(describeStageConditions(summary, 'forecast'), [
     'Señal de precipitación presente en el recorrido: hasta 1.8 mm en un nodo horario.',
     'Ráfagas modeladas de hasta 31 km/h.',
     'Diferencia térmica modelada de 3.6 °C a lo largo del tramo.',
@@ -58,7 +58,16 @@ test('describeStageConditions reports signals without claiming actual grip or ro
   ])
 })
 
-test('describeStageConditions stays explicit when the forecast is unavailable', () => {
+test('describeStageConditions labels historical values as reference rather than forecast or observation', () => {
+  const lines = describeStageConditions(summary, 'historical-reference')
+  const joined = lines.join(' ')
+
+  assert.match(joined, /referencia histórica/i)
+  assert.doesNotMatch(joined, /pronóstico para el día/i)
+  assert.doesNotMatch(joined, /observad/i)
+})
+
+test('describeStageConditions stays explicit when weather is unavailable', () => {
   assert.deepEqual(describeStageConditions({
     temperatureMinC: null,
     temperatureMaxC: null,
@@ -67,5 +76,5 @@ test('describeStageConditions stays explicit when the forecast is unavailable', 
     elevationMinM: null,
     elevationMaxM: null,
     validAt: null,
-  }), ['Pronóstico de tramo pendiente o fuera del horizonte disponible.'])
+  }, null), ['Contexto meteorológico no disponible.'])
 })
