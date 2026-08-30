@@ -40,13 +40,15 @@
 
 .map-static-label,
 .map-environment-chip,
-.map-direction-arrow {
+.map-direction-arrow,
+.map-official-label {
   pointer-events: none;
   user-select: none;
 }
 
 .map-static-label span,
-.map-environment-chip span {
+.map-environment-chip span,
+.map-official-label span {
   display: inline-block;
   white-space: nowrap;
   border: 1px solid rgba(228, 173, 75, 0.58);
@@ -80,6 +82,32 @@
   border-color: rgba(87, 209, 230, 0.72);
   color: #dffaff;
   font-size: 9px;
+}
+
+.map-official-label span {
+  font-size: 9px;
+  padding: 4px 5px;
+}
+
+.map-official-label--spectator span {
+  border-color: #69d39d;
+  color: #a5f1c9;
+}
+
+.map-official-label--parking span {
+  border-color: #e3ad4b;
+  color: #f7d995;
+}
+
+.map-official-label--access span {
+  border-color: #57d1e6;
+  color: #dffaff;
+}
+
+.map-official-label--prohibited span {
+  border-color: #e66b52;
+  color: #ffd5cb;
+  background: rgba(24, 7, 7, 0.94);
 }
 
 .map-direction-arrow span {
@@ -116,7 +144,8 @@
     padding: 8px;
   }
 
-  .map-environment-chip span {
+  .map-environment-chip span,
+  .map-official-label span {
     font-size: 8px;
     padding: 4px;
   }
