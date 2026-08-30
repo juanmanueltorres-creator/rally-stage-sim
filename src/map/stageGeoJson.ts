@@ -11,6 +11,8 @@ type StageMapKind =
   | 'stage-finish'
   | 'spectator-zone'
   | 'spectator-parking'
+  | 'official-access'
+  | 'no-spectator-zone'
   | 'distance-marker'
   | 'direction-arrow'
   | 'environment-chip'
@@ -27,6 +29,8 @@ export interface StageMapVehicle {
 export interface StageMapSpectatorContext {
   spectatorZones: SpectatorPoint[]
   parking: SpectatorPoint[]
+  accessPoints?: SpectatorPoint[]
+  noSpectatorZones?: SpectatorPoint[]
 }
 
 export interface StageMapEnvironmentChip {
@@ -63,6 +67,13 @@ const EMPTY_ANNOTATIONS: StageMapAnnotations = {
   environmentChips: [],
 }
 
+const EMPTY_SPECTATOR_CONTEXT: StageMapSpectatorContext = {
+  spectatorZones: [],
+  parking: [],
+  accessPoints: [],
+  noSpectatorZones: [],
+}
+
 function nodeKind(node: RouteNode): StageMapKind {
   if (node.role === 'start') return 'stage-start'
   if (node.role === 'finish') return 'stage-finish'
@@ -82,12 +93,16 @@ function normalizeVehicles(vehicles: StageMapVehicle[] | [number, number]): Stag
   return vehicles as StageMapVehicle[]
 }
 
+function hasSpatialProvenance(point: SpectatorPoint): point is SpectatorPoint & { coordinate: [number, number] } {
+  return Boolean(point.coordinate && point.provenance && point.provenance.sources.length > 0)
+}
+
 function spectatorFeatures(
   points: SpectatorPoint[],
-  kind: 'spectator-zone' | 'spectator-parking',
+  kind: 'spectator-zone' | 'spectator-parking' | 'official-access' | 'no-spectator-zone',
 ) {
   return points
-    .filter((point): point is SpectatorPoint & { coordinate: [number, number] } => Boolean(point.coordinate))
+    .filter(hasSpatialProvenance)
     .map((point) => ({
       type: 'Feature' as const,
       properties: {
@@ -108,7 +123,7 @@ export function buildStageGeoJson(
   vehicleInput: StageMapVehicle[] | [number, number],
   geometryStatus: StageGeometryStatus,
   nodes: RouteNode[] = [],
-  spectator: StageMapSpectatorContext = { spectatorZones: [], parking: [] },
+  spectator: StageMapSpectatorContext = EMPTY_SPECTATOR_CONTEXT,
   annotations: StageMapAnnotations = EMPTY_ANNOTATIONS,
 ): FeatureCollection<LineString | Point, StageMapProperties> {
   const vehicles = normalizeVehicles(vehicleInput)
@@ -118,14 +133,8 @@ export function buildStageGeoJson(
     features: [
       {
         type: 'Feature',
-        properties: {
-          kind: 'stage-route',
-          geometryStatus,
-        },
-        geometry: {
-          type: 'LineString',
-          coordinates: line.coordinates,
-        },
+        properties: { kind: 'stage-route', geometryStatus },
+        geometry: { type: 'LineString', coordinates: line.coordinates },
       },
       ...vehicles.map((vehicle) => ({
         type: 'Feature' as const,
@@ -135,10 +144,7 @@ export function buildStageGeoJson(
           status: vehicle.status,
           progress: vehicle.progress,
         },
-        geometry: {
-          type: 'Point' as const,
-          coordinates: vehicle.coordinate,
-        },
+        geometry: { type: 'Point' as const, coordinates: vehicle.coordinate },
       })),
       ...nodes.map((node) => ({
         type: 'Feature' as const,
@@ -147,10 +153,7 @@ export function buildStageGeoJson(
           nodeId: node.id,
           distanceKm: node.distanceKm,
         },
-        geometry: {
-          type: 'Point' as const,
-          coordinates: node.coordinate,
-        },
+        geometry: { type: 'Point' as const, coordinates: node.coordinate },
       })),
       ...annotations.distanceMarkers.map((marker) => ({
         type: 'Feature' as const,
@@ -159,10 +162,7 @@ export function buildStageGeoJson(
           distanceKm: marker.distanceKm,
           label: marker.label,
         },
-        geometry: {
-          type: 'Point' as const,
-          coordinates: marker.coordinate,
-        },
+        geometry: { type: 'Point' as const, coordinates: marker.coordinate },
       })),
       ...annotations.directionArrows.map((arrow) => ({
         type: 'Feature' as const,
@@ -171,10 +171,7 @@ export function buildStageGeoJson(
           bearingDeg: arrow.bearingDeg,
           label: '➤',
         },
-        geometry: {
-          type: 'Point' as const,
-          coordinates: arrow.coordinate,
-        },
+        geometry: { type: 'Point' as const, coordinates: arrow.coordinate },
       })),
       ...annotations.environmentChips.map((chip) => ({
         type: 'Feature' as const,
@@ -184,13 +181,12 @@ export function buildStageGeoJson(
           label: chip.label,
           weatherMode: chip.weatherMode,
         },
-        geometry: {
-          type: 'Point' as const,
-          coordinates: chip.coordinate,
-        },
+        geometry: { type: 'Point' as const, coordinates: chip.coordinate },
       })),
       ...spectatorFeatures(spectator.spectatorZones, 'spectator-zone'),
       ...spectatorFeatures(spectator.parking, 'spectator-parking'),
+      ...spectatorFeatures(spectator.accessPoints ?? [], 'official-access'),
+      ...spectatorFeatures(spectator.noSpectatorZones ?? [], 'no-spectator-zone'),
     ],
   }
 }
