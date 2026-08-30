@@ -90,6 +90,7 @@ export interface SpectatorPoint {
   label: string
   coordinate?: [number, number]
   description?: string
+  provenance?: DataProvenance
 }
 
 export interface SpectatorService {
@@ -115,6 +116,8 @@ export interface StageSpectatorInfo {
   capacityNote?: string
   spectatorZones: SpectatorPoint[]
   parking: SpectatorPoint[]
+  accessPoints?: SpectatorPoint[]
+  noSpectatorZones?: SpectatorPoint[]
   services: SpectatorService[]
   safetyTrain?: SafetyTrainStep[]
   safetyNote?: string
