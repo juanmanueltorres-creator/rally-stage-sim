@@ -1,4 +1,5 @@
 import type { RallyScheduleStage } from '../domain/rally.ts'
+import type { WeatherMode } from '../map/stageEnvironment.ts'
 import type { StageWeatherSummary } from '../map/weatherSummary.ts'
 
 export interface ScheduleDayGroup {
@@ -40,22 +41,34 @@ function roundOne(value: number): number {
   return Math.round(value * 10) / 10
 }
 
-export function describeStageConditions(summary: StageWeatherSummary): string[] {
+export function describeStageConditions(
+  summary: StageWeatherSummary,
+  mode: WeatherMode | null = 'forecast',
+): string[] {
   const messages: string[] = []
+  const historical = mode === 'historical-reference'
 
   if (summary.maxPrecipitationMm !== null && summary.maxPrecipitationMm > 0) {
     messages.push(
-      `Señal de precipitación presente en el recorrido: hasta ${roundOne(summary.maxPrecipitationMm)} mm en un nodo horario.`,
+      historical
+        ? `Referencia histórica de precipitación: hasta ${roundOne(summary.maxPrecipitationMm)} mm en un nodo horario comparable.`
+        : `Señal de precipitación presente en el recorrido: hasta ${roundOne(summary.maxPrecipitationMm)} mm en un nodo horario.`,
     )
   }
 
   if (summary.maxGustKmh !== null) {
-    messages.push(`Ráfagas modeladas de hasta ${roundOne(summary.maxGustKmh)} km/h.`)
+    messages.push(
+      historical
+        ? `Referencia histórica de ráfagas de hasta ${roundOne(summary.maxGustKmh)} km/h.`
+        : `Ráfagas modeladas de hasta ${roundOne(summary.maxGustKmh)} km/h.`,
+    )
   }
 
   if (summary.temperatureMinC !== null && summary.temperatureMaxC !== null) {
     messages.push(
-      `Diferencia térmica modelada de ${roundOne(summary.temperatureMaxC - summary.temperatureMinC)} °C a lo largo del tramo.`,
+      historical
+        ? `Referencia histórica: diferencia térmica de ${roundOne(summary.temperatureMaxC - summary.temperatureMinC)} °C entre nodos comparables.`
+        : `Diferencia térmica modelada de ${roundOne(summary.temperatureMaxC - summary.temperatureMinC)} °C a lo largo del tramo.`,
     )
   }
 
@@ -65,7 +78,8 @@ export function describeStageConditions(summary: StageWeatherSummary): string[] 
     )
   }
 
-  return messages.length > 0
-    ? messages
-    : ['Pronóstico de tramo pendiente o fuera del horizonte disponible.']
+  if (messages.length > 0) return messages
+  if (mode === null) return ['Contexto meteorológico no disponible.']
+  if (historical) return ['Referencia histórica meteorológica no disponible para este tramo.']
+  return ['Pronóstico de tramo pendiente o fuera del horizonte disponible.']
 }
