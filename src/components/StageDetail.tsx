@@ -14,10 +14,16 @@ import { buildTemperatureDeltaProfile, compareRouteWeather } from '../map/weathe
 import { summarizeRouteWeather, type StageWeatherSummary } from '../map/weatherSummary'
 import { stageShareUrl } from '../navigation/stageRoute'
 import { presentPassComparison } from '../presentation/passComparison'
+import {
+  presentCommandClosure,
+  presentCommandPublicAccess,
+  presentCommandWeather,
+} from '../presentation/stageCommandView'
 import { presentStageDistance } from '../presentation/stageDistance'
 import { describeStageConditions } from '../presentation/stageExperience'
 import { buildPlannedStartGrid } from '../simulation/startGrid'
 import { RallyMap, type EnvironmentStatus } from './RallyMap'
+import { StageCommandBar } from './StageCommandBar'
 import { TemperatureDeltaProfile } from './TemperatureDeltaProfile'
 
 interface StagePassPair {
@@ -91,14 +97,6 @@ function formatSafetyOffset(offsetMinutes: number): string {
   const minutes = absolute % 60
   const detail = hours > 0 ? `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}` : `${minutes}m`
   return `${offsetMinutes < 0 ? 'T−' : 'T+'}${detail}`
-}
-
-function weatherFactLabel(status: EnvironmentStatus, mode: WeatherMode | null): string {
-  if (status === 'loading') return 'ACTUALIZANDO'
-  if (status === 'unavailable') return 'NO DISPONIBLE'
-  if (mode === 'historical-reference') return 'HISTORICAL REF'
-  if (mode === 'forecast') return 'FORECAST'
-  return 'PENDIENTE'
 }
 
 export function StageDetail({
@@ -232,6 +230,9 @@ export function StageDetail({
   const conditions = describeStageConditions(weatherSummary, currentWeatherMode)
   const geometryStatus = technicalStage?.geometryStatus ?? 'pending-verification'
   const distance = presentStageDistance(stage.distanceKm, technicalStage?.distanceKm)
+  const commandWeather = presentCommandWeather(weatherStatus, currentWeatherMode)
+  const commandClosure = presentCommandClosure(spectator, event.timezone)
+  const commandPublicAccess = presentCommandPublicAccess(spectator)
   const stageLabel = stage.name.replace(/\s+1$/, '')
   const sources = useMemo(() => {
     const all = [
@@ -289,16 +290,15 @@ export function StageDetail({
         </div>
       </header>
 
-      <section className="stage-facts" aria-label="Resumen del tramo">
-        <div>
-          <span>DISTANCIA</span>
-          <strong>{distance.primary}</strong>
-          {distance.technical ? <small>{distance.technical}</small> : null}
-        </div>
-        <div><span>PRIMER AUTO</span><strong>{formatClock(stage.scheduledStart, event.timezone)}</strong></div>
-        <div><span>GEOMETRÍA</span><strong>{geometryStatus}</strong></div>
-        <div><span>CLIMA</span><strong>{weatherFactLabel(weatherStatus, currentWeatherMode)}</strong></div>
-      </section>
+      <StageCommandBar
+        distance={distance.primary}
+        technicalDistance={distance.technical}
+        startTime={formatClock(stage.scheduledStart, event.timezone)}
+        geometry={geometryStatus}
+        weather={commandWeather}
+        closure={commandClosure}
+        publicAccess={commandPublicAccess}
+      />
 
       <section className="weather-summary" aria-label="Resumen climático del tramo">
         <div className="section-heading">
@@ -376,8 +376,6 @@ export function StageDetail({
         spectator={spectator}
         scheduledStart={stage.scheduledStart}
         timezone={event.timezone}
-        distancePrimary={distance.primary}
-        distanceTechnical={distance.technical}
         simulationEnabled={simulationOpen}
         onEnvironmentChange={handleEnvironmentChange}
       />
