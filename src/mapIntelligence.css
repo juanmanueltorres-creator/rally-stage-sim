@@ -1,0 +1,123 @@
+.stage-map-context-strip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  background: #26333c;
+  border: 1px solid #26333c;
+  margin-bottom: 8px;
+}
+
+.stage-map-context-strip > div {
+  min-width: 0;
+  background: #090e12;
+  padding: 9px 11px;
+}
+
+.stage-map-context-strip span,
+.stage-map-context-strip small {
+  display: block;
+  color: #7f929e;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.stage-map-context-strip strong {
+  display: block;
+  margin-top: 4px;
+  color: #f3eee4;
+  font-size: 0.73rem;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.stage-map-context-strip small {
+  margin-top: 3px;
+  color: #d8a849;
+  letter-spacing: 0.04em;
+}
+
+.map-static-label,
+.map-environment-chip,
+.map-direction-arrow {
+  pointer-events: none;
+  user-select: none;
+}
+
+.map-static-label span,
+.map-environment-chip span {
+  display: inline-block;
+  white-space: nowrap;
+  border: 1px solid rgba(228, 173, 75, 0.58);
+  background: rgba(6, 12, 16, 0.91);
+  color: #f4efe5;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  padding: 5px 6px;
+}
+
+.map-static-label--start span {
+  border-color: #69d39d;
+  color: #a5f1c9;
+}
+
+.map-static-label--finish span {
+  border-color: #e66b52;
+  color: #ffd5cb;
+}
+
+.map-static-label--distance span {
+  border-color: rgba(244, 239, 229, 0.36);
+  color: #f4efe5;
+  padding: 4px 5px;
+}
+
+.map-environment-chip span {
+  border-color: rgba(87, 209, 230, 0.72);
+  color: #dffaff;
+  font-size: 9px;
+}
+
+.map-direction-arrow span {
+  display: block;
+  color: #f2c565;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 1px 4px #071017, 0 0 6px #071017;
+  transform-origin: center;
+}
+
+.environment-mode-note {
+  margin: 10px 0 0;
+  border-left: 2px solid #d8a849;
+  padding-left: 10px;
+  color: #aab7bf;
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+  .stage-map-context-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .stage-map-context-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stage-map-context-strip > div {
+    padding: 8px;
+  }
+
+  .map-environment-chip span {
+    font-size: 8px;
+    padding: 4px;
+  }
+}
