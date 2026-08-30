@@ -274,7 +274,7 @@ export function StageDetail({
         <button type="button" className="text-button" onClick={onOpenIntro}>WHY THIS EXISTS</button>
       </nav>
 
-      <header className="stage-hero">
+      <header className="stage-hero stage-command-hero">
         <div>
           <p className="eyebrow">{stage.code} · STAGE BRIEF</p>
           <h1 className="editorial-title">{stageLabel}</h1>
@@ -299,6 +299,19 @@ export function StageDetail({
         closure={commandClosure}
         publicAccess={commandPublicAccess}
       />
+
+      <section className="stage-map-primary" aria-label="Mapa principal del tramo">
+        <RallyMap
+          geometryStatus={geometryStatus}
+          geometry={technicalStage?.geometry ?? null}
+          run={run}
+          spectator={spectator}
+          scheduledStart={stage.scheduledStart}
+          timezone={event.timezone}
+          simulationEnabled={simulationOpen}
+          onEnvironmentChange={handleEnvironmentChange}
+        />
+      </section>
 
       <section className="weather-summary" aria-label="Resumen climático del tramo">
         <div className="section-heading">
@@ -368,17 +381,6 @@ export function StageDetail({
           <p className="panel-note">Δ = Pass 2 − Pass 1. Sólo se calcula cuando ambas pasadas usan el mismo tipo de evidencia meteorológica; no implica cambio observado de grip, barro, polvo ni estado de la calzada.</p>
         </section>
       ) : null}
-
-      <RallyMap
-        geometryStatus={geometryStatus}
-        geometry={technicalStage?.geometry ?? null}
-        run={run}
-        spectator={spectator}
-        scheduledStart={stage.scheduledStart}
-        timezone={event.timezone}
-        simulationEnabled={simulationOpen}
-        onEnvironmentChange={handleEnvironmentChange}
-      />
 
       <section className="intelligence-grid">
         <article className="context-panel">
