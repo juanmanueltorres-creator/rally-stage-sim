@@ -13,7 +13,6 @@ import { buildStageGeoJson, type StageMapAnnotations } from '../map/stageGeoJson
 import { describeGeometryStatus } from '../presentation/geometryStatus'
 import { fleetSnapshot } from '../simulation/fleet'
 import { buildPlannedStartGrid } from '../simulation/startGrid'
-import { StageMapContextStrip } from './StageMapContextStrip'
 
 export type EnvironmentStatus = 'idle' | 'loading' | 'ready' | 'unavailable'
 
@@ -24,8 +23,6 @@ interface RallyMapProps {
   spectator?: StageSpectatorInfo
   scheduledStart: string
   timezone: string
-  distancePrimary?: string
-  distanceTechnical?: string | null
   simulationEnabled?: boolean
   onEnvironmentChange?: (
     snapshots: RouteEnvironmentSnapshot[],
@@ -53,21 +50,6 @@ function formatClock(iso: string, timezone: string): string {
 
 function isSpatiallySourced(point: SpectatorPoint): point is SpectatorPoint & { coordinate: [number, number] } {
   return Boolean(point.coordinate && point.provenance && point.provenance.sources.length > 0)
-}
-
-function closureLabel(spectator: StageSpectatorInfo | undefined, timezone: string): string {
-  if (spectator?.roadClosureAt) return `${formatClock(spectator.roadClosureAt, timezone)} PREV`
-  if (spectator?.roadClosureText) return spectator.roadClosureText.toUpperCase()
-  return 'PENDING'
-}
-
-function publicAccessLabel(spectator: StageSpectatorInfo | undefined): string {
-  const publicPoints = [
-    ...(spectator?.spectatorZones ?? []),
-    ...(spectator?.parking ?? []),
-    ...(spectator?.accessPoints ?? []),
-  ].filter(isSpatiallySourced)
-  return publicPoints.length > 0 ? 'OFFICIAL POINTS' : 'PENDING OFFICIAL POINTS'
 }
 
 function addSpectatorPopup(map: maplibregl.Map, layerId: string) {
@@ -145,8 +127,6 @@ export function RallyMap({
   spectator,
   scheduledStart,
   timezone,
-  distancePrimary = '—',
-  distanceTechnical = null,
   simulationEnabled = true,
   onEnvironmentChange,
 }: RallyMapProps) {
@@ -400,16 +380,6 @@ export function RallyMap({
   return (
     <>
       <section className="map-intelligence-block" aria-label="Mapa e inteligencia visible del tramo">
-        <StageMapContextStrip
-          distancePrimary={distancePrimary}
-          distanceTechnical={distanceTechnical}
-          startTime={formatClock(scheduledStart, timezone)}
-          geometryStatus={geometryStatus}
-          weatherStatus={environmentStatus}
-          weatherMode={environmentDataset?.mode ?? null}
-          closure={closureLabel(spectator, timezone)}
-          publicAccess={publicAccessLabel(spectator)}
-        />
         <div className="map-panel" aria-label="Mapa del tramo">
           <div ref={containerRef} className="map-canvas" />
           <div className="map-status" role="status">
