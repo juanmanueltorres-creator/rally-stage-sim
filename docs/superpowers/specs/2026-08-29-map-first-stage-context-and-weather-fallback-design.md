@@ -128,9 +128,17 @@ The app must not silently switch source types. The active mode is always visible
 
 ### Historical reference definition
 
-V1 historical reference uses Open-Meteo Historical Weather API data from previous years for the same calendar window and local stage hour at the same sampled route nodes.
+V1 historical reference uses Open-Meteo Historical Weather API data for **2021, 2022, 2023, 2024 and 2025**, using the same calendar day and nearest local stage hour at the same sampled route nodes.
 
-The implementation should aggregate multiple prior years rather than present one arbitrary prior date as “normal”. The initial target is a small deterministic year set sufficient for a useful reference while keeping browser/API load modest.
+For each node and weather variable:
+
+- collect the five same-date/same-hour historical values;
+- keep only finite values;
+- require at least three valid years;
+- use the median of the valid years as the displayed historical-reference value;
+- if fewer than three years are valid, keep that variable unavailable for that node.
+
+This is deliberately called a **historical reference**, not a climatological normal. Five same-calendar-date samples are useful context but are not enough to claim climate normals or probabilities.
 
 Required historical fields mirror the forecast fields where available:
 
@@ -141,7 +149,9 @@ Required historical fields mirror the forecast fields where available:
 - precipitation;
 - elevation/context when provided or already known.
 
-Historical reference is labelled `HISTORICAL REFERENCE`, never `forecast`, `expected weather`, `normal`, or `observation`.
+For circular wind direction, do not take a numeric median across degrees. V1 keeps wind direction unavailable in the aggregated historical reference unless a circular-statistics implementation is added and tested. Forecast wind direction remains unchanged.
+
+Historical reference is labelled `HISTORICAL REFERENCE · 2021–2025`, never `forecast`, `expected weather`, `normal`, `climatology` or `observation`.
 
 ### Pass 1 ↔ Pass 2 comparison
 
@@ -150,7 +160,7 @@ Pass comparison remains enabled only when both passes use comparable source mode
 Allowed:
 
 - forecast ↔ forecast;
-- historical-reference ↔ historical-reference using the same historical methodology.
+- historical-reference ↔ historical-reference using the exact same 2021–2025 median methodology.
 
 Do not compare forecast ↔ historical-reference as if the delta represented the planned day.
 
@@ -207,14 +217,14 @@ No unsourced object receives `official` status.
 Examples:
 
 - `FORECAST · OPEN-METEO`
-- `HISTORICAL REFERENCE · OPEN-METEO`
+- `HISTORICAL REFERENCE · 2021–2025`
 - `WEATHER TEMPORARILY UNAVAILABLE`
 - `PUBLIC ACCESS · PENDING OFFICIAL POINTS`
 - `GEOMETRY · RECONSTRUCTED`
 
 Historical-mode explanatory text:
 
-> Reference derived from previous years for a comparable calendar period and local stage hour. It is not a forecast or an observation for rally day.
+> Reference derived from 2021–2025 values for the same calendar day and local stage hour. Median per node/variable; minimum three valid years. It is not a forecast, climate normal or rally-day observation.
 
 Road-state disclaimer remains:
 
@@ -238,8 +248,9 @@ Pure unit tests:
 - 5 km marker generation and short-stage behavior;
 - representative environmental-chip selection;
 - direction-arrow positions/bearings;
-- historical URL/query generation;
-- historical response normalization/aggregation;
+- historical URL/query generation for 2021–2025;
+- historical response normalization and median aggregation with minimum-three rule;
+- historical wind direction stays unavailable rather than using invalid linear statistics;
 - weather-source state selection;
 - pass comparison refuses mixed source modes;
 - official spectator category normalization.
@@ -267,7 +278,7 @@ Integration/build guards:
 - direction arrows;
 - balanced 3–5 environmental chips;
 - compact default-visible map context strip;
-- historical weather fallback with explicit mode;
+- historical weather fallback using deterministic 2021–2025 median reference;
 - weather mode propagated through stage summary and provenance;
 - official access/spectator categories supported when sourced;
 - pass comparison guarded against mixed weather modes;
@@ -283,7 +294,8 @@ Integration/build guards:
 - push alerts;
 - backend persistence;
 - automatic scraping of future spectator guides;
-- satellite-derived road-condition inference.
+- satellite-derived road-condition inference;
+- claims of climatological normals or probabilities.
 
 ## Success criteria
 
