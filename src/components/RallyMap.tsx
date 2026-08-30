@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { GeoJSONSource, MapLayerMouseEvent } from 'maplibre-gl'
-import type { SimulatedStageRun, StageGeometryStatus, StageLineString, StageSpectatorInfo } from '../domain/rally'
+import type { SimulatedStageRun, SpectatorPoint, StageGeometryStatus, StageLineString, StageSpectatorInfo } from '../domain/rally'
 import { buildEnvironmentChips } from '../map/environmentChips'
 import { buildRouteNodes } from '../map/environmentNodes'
 import { presentEnvironmentSnapshot } from '../map/environmentView'
@@ -51,6 +51,10 @@ function formatClock(iso: string, timezone: string): string {
   }).format(new Date(iso))
 }
 
+function isSpatiallySourced(point: SpectatorPoint): point is SpectatorPoint & { coordinate: [number, number] } {
+  return Boolean(point.coordinate && point.provenance && point.provenance.sources.length > 0)
+}
+
 function closureLabel(spectator: StageSpectatorInfo | undefined, timezone: string): string {
   if (spectator?.roadClosureAt) return `${formatClock(spectator.roadClosureAt, timezone)} PREV`
   if (spectator?.roadClosureText) return spectator.roadClosureText.toUpperCase()
@@ -58,8 +62,12 @@ function closureLabel(spectator: StageSpectatorInfo | undefined, timezone: strin
 }
 
 function publicAccessLabel(spectator: StageSpectatorInfo | undefined): string {
-  const spatialCount = (spectator?.spectatorZones.length ?? 0) + (spectator?.parking.length ?? 0)
-  return spatialCount > 0 ? 'OFFICIAL POINTS' : 'PENDING OFFICIAL POINTS'
+  const publicPoints = [
+    ...(spectator?.spectatorZones ?? []),
+    ...(spectator?.parking ?? []),
+    ...(spectator?.accessPoints ?? []),
+  ].filter(isSpatiallySourced)
+  return publicPoints.length > 0 ? 'OFFICIAL POINTS' : 'PENDING OFFICIAL POINTS'
 }
 
 function addSpectatorPopup(map: maplibregl.Map, layerId: string) {
@@ -152,7 +160,9 @@ export function RallyMap({
   const spectatorContext = useMemo(() => ({
     spectatorZones: spectator?.spectatorZones ?? [],
     parking: spectator?.parking ?? [],
-  }), [spectator?.parking, spectator?.spectatorZones])
+    accessPoints: spectator?.accessPoints ?? [],
+    noSpectatorZones: spectator?.noSpectatorZones ?? [],
+  }), [spectator?.accessPoints, spectator?.noSpectatorZones, spectator?.parking, spectator?.spectatorZones])
   const [environmentDataset, setEnvironmentDataset] = useState<RouteEnvironmentDataset | null>(null)
   const [environmentStatus, setEnvironmentStatus] = useState<EnvironmentStatus>('idle')
 
@@ -244,11 +254,7 @@ export function RallyMap({
         type: 'line',
         source: 'stage-context',
         filter: ['==', ['get', 'kind'], 'stage-route'],
-        paint: {
-          'line-color': '#e3ad4b',
-          'line-width': 4,
-          'line-opacity': 0.94,
-        },
+        paint: { 'line-color': '#e3ad4b', 'line-width': 4, 'line-opacity': 0.94 },
       })
 
       map.addLayer({
@@ -256,12 +262,7 @@ export function RallyMap({
         type: 'circle',
         source: 'stage-context',
         filter: ['==', ['get', 'kind'], 'environment-node'],
-        paint: {
-          'circle-radius': 5,
-          'circle-color': '#57d1e6',
-          'circle-stroke-color': '#071017',
-          'circle-stroke-width': 2,
-        },
+        paint: { 'circle-radius': 5, 'circle-color': '#57d1e6', 'circle-stroke-color': '#071017', 'circle-stroke-width': 2 },
       })
 
       map.addLayer({
@@ -269,12 +270,7 @@ export function RallyMap({
         type: 'circle',
         source: 'stage-context',
         filter: ['==', ['get', 'kind'], 'stage-start'],
-        paint: {
-          'circle-radius': 7,
-          'circle-color': '#69d39d',
-          'circle-stroke-color': '#f4efe5',
-          'circle-stroke-width': 2,
-        },
+        paint: { 'circle-radius': 7, 'circle-color': '#69d39d', 'circle-stroke-color': '#f4efe5', 'circle-stroke-width': 2 },
       })
 
       map.addLayer({
@@ -282,51 +278,31 @@ export function RallyMap({
         type: 'circle',
         source: 'stage-context',
         filter: ['==', ['get', 'kind'], 'stage-finish'],
-        paint: {
-          'circle-radius': 7,
-          'circle-color': '#f4efe5',
-          'circle-stroke-color': '#e66b52',
-          'circle-stroke-width': 3,
-        },
+        paint: { 'circle-radius': 7, 'circle-color': '#f4efe5', 'circle-stroke-color': '#e66b52', 'circle-stroke-width': 3 },
       })
 
-      map.addLayer({
-        id: 'spectator-zones',
-        type: 'circle',
-        source: 'stage-context',
-        filter: ['==', ['get', 'kind'], 'spectator-zone'],
-        paint: {
-          'circle-radius': 8,
-          'circle-color': '#69d39d',
-          'circle-stroke-color': '#071017',
-          'circle-stroke-width': 3,
-        },
-      })
+      const spectatorLayerDefinitions = [
+        { id: 'spectator-zones', kind: 'spectator-zone', color: '#69d39d' },
+        { id: 'spectator-parking', kind: 'spectator-parking', color: '#e3ad4b' },
+        { id: 'official-access', kind: 'official-access', color: '#57d1e6' },
+        { id: 'no-spectator-zones', kind: 'no-spectator-zone', color: '#e66b52' },
+      ] as const
 
-      map.addLayer({
-        id: 'spectator-parking',
-        type: 'circle',
-        source: 'stage-context',
-        filter: ['==', ['get', 'kind'], 'spectator-parking'],
-        paint: {
-          'circle-radius': 8,
-          'circle-color': '#e3ad4b',
-          'circle-stroke-color': '#071017',
-          'circle-stroke-width': 3,
-        },
-      })
-
-      removePopupHandlers.push(addSpectatorPopup(map, 'spectator-zones'))
-      removePopupHandlers.push(addSpectatorPopup(map, 'spectator-parking'))
+      for (const layer of spectatorLayerDefinitions) {
+        map.addLayer({
+          id: layer.id,
+          type: 'circle',
+          source: 'stage-context',
+          filter: ['==', ['get', 'kind'], layer.kind],
+          paint: { 'circle-radius': 8, 'circle-color': layer.color, 'circle-stroke-color': '#071017', 'circle-stroke-width': 3 },
+        })
+        removePopupHandlers.push(addSpectatorPopup(map, layer.id))
+      }
 
       const startNode = nodes.find((node) => node.role === 'start')
       const finishNode = nodes.find((node) => node.role === 'finish')
-      if (startNode) {
-        overlayMarkers.push(addOverlayMarker(map, startNode.coordinate, 'START', 'map-static-label map-static-label--start', 'bottom'))
-      }
-      if (finishNode) {
-        overlayMarkers.push(addOverlayMarker(map, finishNode.coordinate, 'FINISH', 'map-static-label map-static-label--finish', 'bottom'))
-      }
+      if (startNode) overlayMarkers.push(addOverlayMarker(map, startNode.coordinate, 'START', 'map-static-label map-static-label--start', 'bottom'))
+      if (finishNode) overlayMarkers.push(addOverlayMarker(map, finishNode.coordinate, 'FINISH', 'map-static-label map-static-label--finish', 'bottom'))
       for (const marker of mapAnnotations.distanceMarkers) {
         overlayMarkers.push(addOverlayMarker(map, marker.coordinate, marker.label, 'map-static-label map-static-label--distance', 'bottom'))
       }
@@ -337,6 +313,17 @@ export function RallyMap({
         overlayMarkers.push(addOverlayMarker(map, chip.coordinate, chip.label, 'map-environment-chip', 'top'))
       }
 
+      const sourcedSpectatorLabels: Array<{ point: SpectatorPoint; prefix: string; className: string }> = [
+        ...spectatorContext.spectatorZones.map((point) => ({ point, prefix: 'SPECTATOR', className: 'map-official-label map-official-label--spectator' })),
+        ...spectatorContext.parking.map((point) => ({ point, prefix: 'PARKING', className: 'map-official-label map-official-label--parking' })),
+        ...spectatorContext.accessPoints.map((point) => ({ point, prefix: 'ACCESS', className: 'map-official-label map-official-label--access' })),
+        ...spectatorContext.noSpectatorZones.map((point) => ({ point, prefix: 'NO SPECTATOR', className: 'map-official-label map-official-label--prohibited' })),
+      ]
+      for (const item of sourcedSpectatorLabels) {
+        if (!isSpatiallySourced(item.point)) continue
+        overlayMarkers.push(addOverlayMarker(map, item.point.coordinate, `${item.prefix} · ${item.point.label}`, item.className, 'bottom'))
+      }
+
       if (simulationActive && run) {
         map.addLayer({
           id: 'simulated-vehicle',
@@ -344,26 +331,9 @@ export function RallyMap({
           source: 'stage-context',
           filter: ['==', ['get', 'kind'], 'simulated-vehicle'],
           paint: {
-            'circle-radius': [
-              'match',
-              ['get', 'status'],
-              'waiting', 4,
-              'finished', 5,
-              7,
-            ],
-            'circle-color': [
-              'match',
-              ['get', 'status'],
-              'waiting', '#66717a',
-              'finished', '#f4efe5',
-              '#ff6258',
-            ],
-            'circle-opacity': [
-              'match',
-              ['get', 'status'],
-              'waiting', 0.45,
-              0.98,
-            ],
+            'circle-radius': ['match', ['get', 'status'], 'waiting', 4, 'finished', 5, 7],
+            'circle-color': ['match', ['get', 'status'], 'waiting', '#66717a', 'finished', '#f4efe5', '#ff6258'],
+            'circle-opacity': ['match', ['get', 'status'], 'waiting', 0.45, 0.98],
             'circle-stroke-color': '#ffffff',
             'circle-stroke-width': 2,
           },
@@ -375,8 +345,13 @@ export function RallyMap({
         new maplibregl.LngLatBounds(geometry.coordinates[0], geometry.coordinates[0]),
       )
 
-      for (const point of [...spectatorContext.spectatorZones, ...spectatorContext.parking]) {
-        if (point.coordinate) bounds.extend(point.coordinate)
+      for (const point of [
+        ...spectatorContext.spectatorZones,
+        ...spectatorContext.parking,
+        ...spectatorContext.accessPoints,
+        ...spectatorContext.noSpectatorZones,
+      ]) {
+        if (isSpatiallySourced(point)) bounds.extend(point.coordinate)
       }
 
       map.fitBounds(bounds, { padding: 48, duration: 0 })
@@ -416,6 +391,12 @@ export function RallyMap({
     }
   }, [geometry, geometryStatus, mapAnnotations, nodes, run, scheduledStart, simulationEnabled, spectatorContext, startGrid])
 
+  const officialSpatialCount = [
+    ...spectatorContext.spectatorZones,
+    ...spectatorContext.parking,
+    ...spectatorContext.accessPoints,
+  ].filter(isSpatiallySourced).length
+
   return (
     <>
       <section className="map-intelligence-block" aria-label="Mapa e inteligencia visible del tramo">
@@ -435,13 +416,9 @@ export function RallyMap({
             <span className="status-dot" aria-hidden="true" />
             <span>{describeGeometryStatus(geometryStatus, Boolean(geometry))}</span>
             {geometry && run && simulationEnabled ? (
-              <span ref={simulationRef}>
-                {run.carCount} SIM {run.priority} · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×
-              </span>
+              <span ref={simulationRef}>{run.carCount} SIM {run.priority} · {formatInterval(run.startIntervalSeconds)} slots · {run.playbackSpeed}×</span>
             ) : geometry ? <span>TRAMO + CONTEXTO AMBIENTAL</span> : null}
-            {spectatorContext.spectatorZones.length > 0 || spectatorContext.parking.length > 0 ? (
-              <span>{spectatorContext.spectatorZones.length} ZONA(S) · {spectatorContext.parking.length} PARKING</span>
-            ) : null}
+            {officialSpatialCount > 0 ? <span>{officialSpatialCount} PUNTO(S) OFICIAL(ES)</span> : null}
           </div>
         </div>
       </section>
@@ -452,32 +429,19 @@ export function RallyMap({
             <p className="eyebrow">CLIMA A LO LARGO DEL TRAMO · {environmentDataset?.sourceLabel ?? 'OPEN-METEO'}</p>
             <h2>START → nodos cada 2,5 km → FINISH</h2>
           </div>
-          <p>
-            Muestreo espacial sobre la geometría de referencia. Los valores son contexto meteorológico, no una afirmación de resolución de 2,5 km ni una lectura del estado real del camino.
-          </p>
+          <p>Muestreo espacial sobre la geometría de referencia. Los valores son contexto meteorológico, no una afirmación de resolución de 2,5 km ni una lectura del estado real del camino.</p>
         </div>
 
-        {environmentStatus === 'loading' ? (
-          <p className="environment-state">Resolviendo forecast y, si hace falta, referencia histórica…</p>
-        ) : null}
-
+        {environmentStatus === 'loading' ? <p className="environment-state">Resolviendo forecast y, si hace falta, referencia histórica…</p> : null}
         {environmentStatus === 'unavailable' ? (
-          <p className="environment-state environment-state--warning">
-            No se pudo cargar forecast ni referencia histórica. El recorrido y sus referencias espaciales siguen siendo válidos.
-          </p>
+          <p className="environment-state environment-state--warning">No se pudo cargar forecast ni referencia histórica. El recorrido y sus referencias espaciales siguen siendo válidos.</p>
         ) : null}
 
         {environmentStatus === 'ready' ? (
           <div className="environment-grid">
             {environmentCards.map(({ snapshot, view }) => (
-              <article
-                className={`environment-node-card${snapshot.node.role !== 'context' ? ' environment-node-card--terminal' : ''}`}
-                key={snapshot.node.id}
-              >
-                <div className="environment-node-heading">
-                  <strong>{view.position}</strong>
-                  <span>{view.validAt}</span>
-                </div>
+              <article className={`environment-node-card${snapshot.node.role !== 'context' ? ' environment-node-card--terminal' : ''}`} key={snapshot.node.id}>
+                <div className="environment-node-heading"><strong>{view.position}</strong><span>{view.validAt}</span></div>
                 <div className="environment-node-values">
                   <div><span>TEMP</span><strong>{view.temperature}</strong></div>
                   <div><span>VIENTO</span><strong>{view.wind}</strong></div>
@@ -490,13 +454,8 @@ export function RallyMap({
           </div>
         ) : null}
 
-        {environmentDataset?.methodologyNote ? (
-          <p className="environment-mode-note">{environmentDataset.methodologyNote}</p>
-        ) : null}
-
-        <p className="environment-source">
-          Fuente activa: {environmentDataset?.sourceLabel ?? 'WEATHER PENDING'} · consulta en {timezone} para la hora local prevista del tramo.
-        </p>
+        {environmentDataset?.methodologyNote ? <p className="environment-mode-note">{environmentDataset.methodologyNote}</p> : null}
+        <p className="environment-source">Fuente activa: {environmentDataset?.sourceLabel ?? 'WEATHER PENDING'} · consulta en {timezone} para la hora local prevista del tramo.</p>
       </section>
     </>
   )
