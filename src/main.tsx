@@ -6,6 +6,7 @@ import mapLibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 import './styles.css'
 import './spectator.css'
 import './passComparison.css'
+import './mapIntelligence.css'
 import { App } from './App'
 
 setWorkerUrl(mapLibreWorkerUrl)
