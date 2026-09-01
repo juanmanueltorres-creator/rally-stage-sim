@@ -49,7 +49,7 @@ export function RallyOverview({ event, schedule, notice, onOpenIntro }: RallyOve
 
       <section className="overview-intro-strip">
         <span className="status-pulse" aria-hidden="true" />
-        <p><strong>SS1 TURQUÍA</strong> ya tiene recorrido reconstruido + contexto climático por nodos. El resto se publica sin inventar geometrías mientras espera verificación.</p>
+        <p><strong>VIERNES · SS1–SS6</strong> ya tienen recorrido reconstruido + contexto climático por nodos. Sábado y domingo permanecen como cronograma mientras sus geometrías siguen pendientes.</p>
       </section>
 
       <div className="schedule-days">
