@@ -1,0 +1,128 @@
+.safety-train-panel {
+  margin-top: 10px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.safety-timeline {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.safety-step {
+  position: relative;
+  min-width: 0;
+  padding: 12px 10px;
+  border: 1px solid #283138;
+  background: #090d10;
+}
+
+.safety-step::before {
+  position: absolute;
+  top: -7px;
+  left: 12px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--panel-soft);
+  border-radius: 50%;
+  background: var(--cyan);
+  content: "";
+}
+
+.safety-step--start {
+  border-color: #70552d;
+  background: #11100c;
+}
+
+.safety-step--start::before {
+  background: var(--amber);
+}
+
+.safety-step-offset {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--dim);
+  font-size: 0.54rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+}
+
+.safety-step > strong {
+  display: block;
+  color: #dce5e8;
+  font-size: 1rem;
+}
+
+.safety-step h3 {
+  margin: 7px 0 5px;
+  color: #d6d1c7;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.safety-step p {
+  margin: 0;
+  color: #77848b;
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
+.maplibregl-popup-content {
+  border: 1px solid #37444b;
+  border-radius: 0;
+  background: #0a0f12;
+  color: var(--ink);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.35);
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #0a0f12 !important;
+  border-bottom-color: #0a0f12 !important;
+}
+
+.maplibregl-popup-close-button {
+  color: var(--muted);
+}
+
+.map-popup-content {
+  min-width: 180px;
+  max-width: 260px;
+  padding: 3px 5px 4px;
+}
+
+.map-popup-content strong {
+  display: block;
+  color: var(--amber-bright);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.map-popup-content p {
+  margin: 6px 0 0;
+  color: #a9b3b7;
+  font-size: 0.67rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 1000px) {
+  .safety-timeline {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .safety-timeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 390px) {
+  .safety-timeline {
+    grid-template-columns: 1fr;
+  }
+}

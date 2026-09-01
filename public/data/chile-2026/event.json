@@ -1,0 +1,25 @@
+{
+  "id": "chile-2026",
+  "name": "WRC Rally Chile Bio Bío 2026",
+  "country": "Chile",
+  "region": "Biobío",
+  "startDate": "2026-09-10",
+  "endDate": "2026-09-13",
+  "timezone": "America/Santiago",
+  "provenance": {
+    "state": "planned",
+    "sources": [
+      {
+        "label": "WRC 2026 calendar",
+        "url": "https://www.wrc.com/en/calendar",
+        "accessedAt": "2026-08-29"
+      },
+      {
+        "label": "WRC Rally Chile Bio Bío 2026 route announcement",
+        "url": "https://www.wrc.com/en/news/rally-chile-bio-bio-reveals-revamped-route-for-2026",
+        "accessedAt": "2026-08-29"
+      }
+    ],
+    "note": "Pre-event planned dataset. Values may change before competition."
+  }
+}

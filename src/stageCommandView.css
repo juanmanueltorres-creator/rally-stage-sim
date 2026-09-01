@@ -1,0 +1,225 @@
+.stage-command-hero {
+  padding-bottom: 18px;
+  border-bottom: 0;
+  animation: stage-command-hero-in 220ms ease-out both;
+}
+
+.stage-command-bar {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 8px;
+  border: 1px solid #26333c;
+  background: #26333c;
+}
+
+.stage-command-bar > div {
+  min-width: 0;
+  padding: 9px 11px;
+  background: #090e12;
+}
+
+.stage-command-bar span,
+.stage-command-bar small {
+  display: block;
+  color: #7f929e;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.stage-command-bar strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.stage-command-bar small {
+  margin-top: 3px;
+  color: var(--amber);
+  letter-spacing: 0.03em;
+}
+
+.stage-map-primary {
+  margin-bottom: 10px;
+  animation: stage-command-map-in 240ms 40ms ease-out both;
+}
+
+.stage-map-primary .map-canvas {
+  height: clamp(500px, 66vh, 760px);
+}
+
+.stage-detail-shell,
+.stage-detail-shell * {
+  min-width: 0;
+}
+
+.stage-detail-shell .section-heading {
+  border-bottom-color: rgba(42, 52, 60, 0.72);
+}
+
+.stage-detail-shell .weather-metrics article,
+.stage-detail-shell .pass-comparison-metrics article {
+  border-color: #223039;
+  background: #091015;
+}
+
+.stage-detail-shell .intelligence-grid {
+  margin-top: 8px;
+}
+
+.stage-detail-stack {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.stage-disclosure {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #090d10;
+}
+
+.stage-disclosure-trigger {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.stage-disclosure-trigger > span {
+  color: var(--amber);
+  font-size: 0.61rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.stage-disclosure-trigger small {
+  color: var(--dim);
+  font-size: 0.58rem;
+}
+
+.stage-disclosure-trigger b {
+  color: var(--amber-bright);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.stage-disclosure-trigger:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+}
+
+.stage-disclosure-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 180ms ease;
+}
+
+.stage-disclosure-body[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.stage-disclosure-panel {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 14px;
+}
+
+.stage-disclosure-body[data-open='true'] .stage-disclosure-panel {
+  padding-bottom: 14px;
+}
+
+.stage-disclosure-panel a,
+.stage-detail-shell .sources a {
+  overflow-wrap: anywhere;
+}
+
+@keyframes stage-command-hero-in {
+  from {
+    opacity: 0.92;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stage-command-map-in {
+  from {
+    opacity: 0.94;
+    transform: scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .stage-command-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .stage-map-primary .map-canvas {
+    height: clamp(430px, 62vh, 650px);
+  }
+}
+
+@media (max-width: 780px) {
+  .stage-command-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .stage-command-hero .stage-hero-actions {
+    justify-self: start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .stage-command-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stage-map-primary .map-canvas {
+    height: min(62vh, 520px);
+  }
+
+  .stage-disclosure-trigger {
+    grid-template-columns: 1fr auto;
+  }
+
+  .stage-disclosure-trigger small {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-bottom: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-detail-shell *,
+  .stage-detail-shell *::before,
+  .stage-detail-shell *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+  }
+}

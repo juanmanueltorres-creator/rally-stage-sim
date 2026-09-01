@@ -1,0 +1,28 @@
+{
+  "name": "rally-stage-sim",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "node --experimental-strip-types --test src/**/*.test.ts",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@turf/along": "^7.2.0",
+    "@turf/helpers": "^7.2.0",
+    "@turf/length": "^7.2.0",
+    "maplibre-gl": "^6.6.0",
+    "motion": "^13.1.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.7.2",
+    "vite": "^6.1.0"
+  }
+}

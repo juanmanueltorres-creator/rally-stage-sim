@@ -1,0 +1,47 @@
+[
+  {
+    "stageCode": "SS4",
+    "sourceStageCode": "SS1",
+    "provenance": {
+      "state": "planned",
+      "sources": [
+        {
+          "label": "WRC — Rally Chile Bio Bío reveals revamped route for 2026",
+          "url": "https://www.wrc.com/en/news/rally-chile-bio-bio-reveals-revamped-route-for-2026",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "WRC states that each of Friday's three stages is run twice. SS4 is therefore the second competitive pass over the same Turquía route represented by SS1; schedule time remains independent."
+    }
+  },
+  {
+    "stageCode": "SS5",
+    "sourceStageCode": "SS2",
+    "provenance": {
+      "state": "planned",
+      "sources": [
+        {
+          "label": "WRC — Rally Chile Bio Bío reveals revamped route for 2026",
+          "url": "https://www.wrc.com/en/news/rally-chile-bio-bio-reveals-revamped-route-for-2026",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "WRC states that each of Friday's three stages is run twice. SS5 is therefore the second competitive pass over the same Nuevo Rere route represented by SS2; schedule time remains independent."
+    }
+  },
+  {
+    "stageCode": "SS6",
+    "sourceStageCode": "SS3",
+    "provenance": {
+      "state": "planned",
+      "sources": [
+        {
+          "label": "WRC — Rally Chile Bio Bío reveals revamped route for 2026",
+          "url": "https://www.wrc.com/en/news/rally-chile-bio-bio-reveals-revamped-route-for-2026",
+          "accessedAt": "2026-08-29"
+        }
+      ],
+      "note": "WRC states that each of Friday's three stages is run twice. SS6 is therefore the second competitive pass over the same Hualqui route represented by SS3; schedule time remains independent."
+    }
+  }
+]
