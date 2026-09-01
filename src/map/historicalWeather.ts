@@ -14,6 +14,7 @@ const HISTORICAL_HOURLY_VARIABLES = [
 ] as const
 
 export const HISTORICAL_REFERENCE_YEARS = [2021, 2022, 2023, 2024, 2025] as const
+const MIN_HISTORICAL_REFERENCE_YEARS = 3
 
 interface FetchResponseLike {
   ok: boolean
@@ -37,7 +38,7 @@ function finiteValues(values: Array<number | null | undefined>): number[] {
 
 function median(values: Array<number | null | undefined>): number | null {
   const finite = finiteValues(values)
-  if (finite.length < 3) return null
+  if (finite.length < MIN_HISTORICAL_REFERENCE_YEARS) return null
 
   const sorted = [...finite].sort((a, b) => a - b)
   const middle = Math.floor(sorted.length / 2)
@@ -125,17 +126,24 @@ export async function fetchHistoricalReference(
   const yearlySnapshots: RouteEnvironmentSnapshot[][] = []
 
   for (const year of HISTORICAL_REFERENCE_YEARS) {
-    const requestUrl = buildHistoricalWeatherUrl(nodes, targetIso, timezone, year)
-    const response = await fetcher(requestUrl)
+    try {
+      const requestUrl = buildHistoricalWeatherUrl(nodes, targetIso, timezone, year)
+      const response = await fetcher(requestUrl)
+      if (!response.ok) continue
 
-    if (!response.ok) {
-      const statusSuffix = response.status ? ` (${response.status})` : ''
-      throw new Error(`Open-Meteo historical request failed${statusSuffix}`)
+      const rawPayload = await response.json()
+      const payload = (Array.isArray(rawPayload) ? rawPayload : [rawPayload]) as OpenMeteoLocationPayload[]
+      const snapshots = normalizeHistoricalYear(nodes, payload, targetIso, year)
+      if (snapshots.length > 0) yearlySnapshots.push(snapshots)
+    } catch {
+      // One unavailable historical year must not invalidate the whole reference window.
     }
+  }
 
-    const rawPayload = await response.json()
-    const payload = (Array.isArray(rawPayload) ? rawPayload : [rawPayload]) as OpenMeteoLocationPayload[]
-    yearlySnapshots.push(normalizeHistoricalYear(nodes, payload, targetIso, year))
+  if (yearlySnapshots.length < MIN_HISTORICAL_REFERENCE_YEARS) {
+    throw new Error(
+      `at least three historical years are required; loaded ${yearlySnapshots.length} of ${HISTORICAL_REFERENCE_YEARS.length}`,
+    )
   }
 
   return aggregateHistoricalReference(yearlySnapshots, targetIso)
