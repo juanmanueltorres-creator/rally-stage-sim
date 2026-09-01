@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import type { RallyScheduleStage } from '../domain/rally.ts'
 import type { StageWeatherSummary } from '../map/weatherSummary.ts'
@@ -47,6 +48,13 @@ test('groupScheduleByDay keeps rally stages ordered under human-readable day lab
 
 test('totalCompetitiveKm sums the schedule snapshot rather than hardcoding the rally total', () => {
   assert.equal(totalCompetitiveKm(stages), 65.41)
+})
+
+test('rally overview describes the six Friday stages as available without implying only SS1 has geometry', () => {
+  const overviewSource = readFileSync(new URL('../components/RallyOverview.tsx', import.meta.url), 'utf8')
+
+  assert.match(overviewSource, /SS1–SS6/)
+  assert.doesNotMatch(overviewSource, /SS1 TURQUÍA<\/strong> ya tiene recorrido reconstruido/)
 })
 
 test('describeStageConditions reports forecast signals without claiming actual grip or road state', () => {
